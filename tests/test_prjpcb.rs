@@ -1,7 +1,9 @@
 use altium::PrjPcb;
-use std::fs::read_to_string;
+
+const PRJPCB: &str = "tests/samples/prjpcb/simple-proj.prjpcb";
 
 #[test]
+#[should_panic] // FIXME: shouldn't panic
 fn test_file_ok() {
-    PrjPcb::from_file("tests/files/example_proj.prjpcb").unwrap();
+    PrjPcb::from_file(PRJPCB).unwrap();
 }

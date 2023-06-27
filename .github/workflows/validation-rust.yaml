@@ -1,0 +1,125 @@
+---
+
+# Main "useful" actions config file
+# Cache config comes from https://github.com/actions/cache/blob/main/examples.md#rust---cargo
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+
+name: Rust Validation
+
+env:
+  RUSTDOCFLAGS: -D warnings
+  RUSTFLAGS: -D warnings
+  CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
+
+jobs:
+  clippy:
+    name: "Clippy (cargo clippy)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+      - run: cargo clippy --all-features --all-targets -- -D warnings
+      - run: cargo clippy --no-default-features --all-targets -- -D warnings
+
+  test:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+        - build: linux
+          os: ubuntu-latest
+          target: x86_64-unknown-linux-musl
+          extension: ''
+        # - build: macos
+        #   os: macos-latest
+        #   target: x86_64-apple-darwin
+        #   extension: ''
+        - build: windows-msvc
+          os: windows-latest
+          target: x86_64-pc-windows-msvc
+    name: "Test on ${{ matrix.os }} (cargo test)"
+    runs-on: ${{ matrix.os }}
+    env:
+      MYSQLCLIENT_LIB_DIR: C:\mysql\lib
+    steps:
+      - uses: actions/checkout@v2
+      - name: List files
+        run: |
+          pwd
+          ls
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: dtolnay/rust-toolchain@1.65.0
+      - run: cargo test
+
+  fmt:
+    name: "Format (cargo fmt)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+            components: rustfmt
+      - run: cargo fmt --all -- --check
+      - uses: actions/setup-python@v3
+      - name: Validate pre-commit
+        uses: pre-commit/action@v3.0.0
+
+  doc:
+    name: "Docs (cargo doc)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo doc
+
+  outdated:
+    name: Outdated
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/install@cargo-outdated
+      - run: cargo outdated --workspace --exit-code 1 --ignore lipsum

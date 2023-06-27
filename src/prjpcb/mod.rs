@@ -1,7 +1,7 @@
 mod parser;
 
 use crate::common::UniqueId;
-use crate::errors::AltiumError;
+use crate::errors::Error;
 use ini::{Ini, Properties};
 use lazy_static::lazy_static;
 use parser::{parse_bool, parse_int, parse_string};
@@ -15,9 +15,11 @@ use uuid::Uuid;
 use self::parser::parse_unique_id;
 
 lazy_static! {
+    /// `Document1`, `Document2`, etc
     static ref DOC_RE: Regex = Regex::new(r"Document\d+").unwrap();
 }
 
+/// Representation of a PCB Project file (`.PrjPcb`)
 #[non_exhaustive]
 pub struct PrjPcb {
     design: Design,
@@ -28,20 +30,6 @@ pub struct PrjPcb {
     parameters: Vec<HashMap<String, String>>,
     configurations: Vec<Configuration>,
     original: Ini,
-}
-
-impl Debug for PrjPcb {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PrjPcb")
-            .field("design", &self.design)
-            .field("preferences", &self.preferences)
-            .field("release", &self.release)
-            .field("documents", &self.documents)
-            .field("variants", &self.variants)
-            .field("parameters", &self.parameters)
-            .field("configurations", &self.configurations)
-            .finish()
-    }
 }
 
 impl PrjPcb {
@@ -58,16 +46,16 @@ impl PrjPcb {
         &self.documents
     }
 
-    pub fn from_file<P: AsRef<Path>>(filename: P) -> Result<Self, AltiumError> {
+    pub fn from_file<P: AsRef<Path>>(filename: P) -> Result<Self, Error> {
         let ini = Ini::load_from_file(filename)?;
         Self::from_ini(ini)
     }
-    pub fn from_string(s: &str) -> Result<Self, AltiumError> {
+    pub fn from_string(s: &str) -> Result<Self, Error> {
         let ini = Ini::load_from_str(s)?;
         Self::from_ini(ini)
     }
 
-    pub fn from_ini(ini: Ini) -> Result<Self, AltiumError> {
+    pub fn from_ini(ini: Ini) -> Result<Self, Error> {
         for (i, s) in ini.iter().take(10).enumerate() {
             eprintln!("{i}:\n{s:#?}\n")
         }
@@ -85,7 +73,23 @@ impl PrjPcb {
     }
 }
 
+impl Debug for PrjPcb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PrjPcb")
+            .field("design", &self.design)
+            .field("preferences", &self.preferences)
+            .field("release", &self.release)
+            .field("documents", &self.documents)
+            .field("variants", &self.variants)
+            .field("parameters", &self.parameters)
+            .field("configurations", &self.configurations)
+            .finish()
+    }
+}
+
 /// Design section of a `PrjPCB` file
+///
+/// This contains information
 #[non_exhaustive]
 #[derive(Debug, PartialEq)]
 pub struct Design {
@@ -93,10 +97,10 @@ pub struct Design {
 }
 
 impl Design {
-    fn from_prj_ini(ini: Ini) -> Result<Self, AltiumError> {
+    fn from_prj_ini(ini: Ini) -> Result<Self, Error> {
         let sec = ini
             .section(Some("Design"))
-            .ok_or(AltiumError::MissingSection("Design".to_owned()))?;
+            .ok_or(Error::MissingSection("Design".to_owned()))?;
 
         Ok(Self {
             original: sec.to_owned(),
@@ -115,7 +119,7 @@ pub struct Preferences {
 }
 
 impl Preferences {
-    fn from_prj_ini(ini: Ini) -> Result<Option<Self>, AltiumError> {
+    fn from_prj_ini(ini: Ini) -> Result<Option<Self>, Error> {
         Ok(ini.section(Some("Preferences")).map(|sec| Self {
             original: sec.to_owned(),
         }))
@@ -129,7 +133,7 @@ pub struct Release {
 }
 
 impl Release {
-    fn from_prj_ini(ini: Ini) -> Result<Self, AltiumError> {
+    fn from_prj_ini(ini: Ini) -> Result<Self, Error> {
         todo!()
     }
 }
@@ -155,7 +159,7 @@ pub struct Document {
 
 impl Document {
     /// Create a vector of `Document`s from an ini file
-    fn from_prj_ini(ini: Ini) -> Result<Vec<Self>, AltiumError> {
+    fn from_prj_ini(ini: Ini) -> Result<Vec<Self>, Error> {
         let mut doc_sections: Vec<&str> = ini
             .sections()
             .filter_map(|nameopt| {
@@ -187,7 +191,7 @@ impl Document {
     }
 
     /// Create a single `Document` from an ini section
-    fn from_section(sec: &Properties) -> Result<Self, AltiumError> {
+    fn from_section(sec: &Properties) -> Result<Self, Error> {
         Ok(Self {
             document_path: parse_string(sec, "DocumentPath"),
             annotation_en: parse_bool(sec, "AnnotationEnabled"),
@@ -218,7 +222,7 @@ pub struct Variant {
 }
 
 impl Variant {
-    fn from_prj_ini(ini: Ini) -> Result<Self, AltiumError> {
+    fn from_prj_ini(ini: Ini) -> Result<Self, Error> {
         todo!()
     }
 }
@@ -228,7 +232,7 @@ impl Variant {
 pub struct Variation {}
 
 impl Variation {
-    fn from_prj_ini(ini: Ini) -> Result<Self, AltiumError> {
+    fn from_prj_ini(ini: Ini) -> Result<Self, Error> {
         todo!()
     }
 }
@@ -241,7 +245,7 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    fn from_prj_ini(ini: Ini) -> Result<Self, AltiumError> {
+    fn from_prj_ini(ini: Ini) -> Result<Self, Error> {
         todo!()
     }
 }

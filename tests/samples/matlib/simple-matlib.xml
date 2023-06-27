@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ExtensibleLibrary SerializerVersion="1.1.0.0" LibraryId="7da0bbdf-506b-45fd-b330-696f14e1f8e5" Version="1.1.0.0" xmlns="http://altium.com/ns/Data/ExtensibleLibraries">
+  <Types />
+  <TypeExtensions />
+  <Entities>
+    <!-- Soldermask -->
+    <Entity Id="10e01a92-a3c5-4d81-9736-c019099af919" TypeId="968469a9-c799-46e2-bc61-c05b2553ab48" RevisionId="7b4ee582-49ba-48cc-ae19-315194fccacb" RevisionDate="2022-03-20T16:48:37.2478052Z">
+      <Property Name="Solid" Type="DimValue" Dimension="Relative">2%</Property>
+      <Property Name="Color" Type="System.Windows.Media.Color, PresentationCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">#F0F0F0F0</Property>
+      <Property Name="Frequency" Type="DimValue" Dimension="Frequency">1GHz</Property>
+      <Property Name="DielectricConstant" Type="DimValue" Dimension="Dimensionless">4</Property>
+      <Property Name="LossTangent" Type="DimValue" Dimension="Dimensionless">0.01</Property>
+      <Property Name="Manufacturer" Type="String">TestMfgrSM</Property>
+      <Property Name="Name" Type="String">Test Solder Mask 2</Property>
+      <Property Name="Thickness" Type="DimValue" Dimension="Length">0.05mm</Property>
+    </Entity>
+    <!-- Flex Coverlay -->
+    <Entity Id="f55a9ca5-f143-4246-a672-9e8fdaabee81" TypeId="cd632416-6fe1-4ea1-bb89-01d4b2eae217" RevisionId="7d0de068-6ac4-426a-8cdf-219ddc1f7409" RevisionDate="2022-03-20T16:48:37.2478052Z">
+      <Property Name="DielectricStrength" Type="DimValue" Dimension="DielectricStrength">110kV/mm</Property>
+      <Property Name="VolumeResistivity" Type="DimValue" Dimension="ElectricalResistivity">1E12ohm*cm</Property>
+      <Property Name="Color" Type="System.Windows.Media.Color, PresentationCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">#FFFF0000</Property>
+      <Property Name="Frequency" Type="DimValue" Dimension="Frequency">1GHz</Property>
+      <Property Name="DielectricConstant" Type="DimValue" Dimension="Dimensionless">4.1</Property>
+      <Property Name="LossTangent" Type="DimValue" Dimension="Dimensionless">0.11</Property>
+      <Property Name="Manufacturer" Type="String">Mfgr</Property>
+      <Property Name="Name" Type="String">Flex Coverlay</Property>
+      <Property Name="Thickness" Type="DimValue" Dimension="Length">0.1mm</Property>
+    </Entity>
+    <!-- Copper Foil -->
+    <Entity Id="d57d278f-4d4f-4bed-bc55-ba1103b6f65d" TypeId="4be0915d-5b0d-4c59-8fae-d57f8650d474" RevisionId="668f1da7-1101-47d9-9b5f-61862964e966" RevisionDate="2022-03-20T16:48:37.2478052Z">
+      <Property Name="Weight" Type="DimValue" Dimension="Mass">9.35534g</Property>
+      <Property Name="Process" Type="String">EDDDD</Property>
+      <Property Name="Manufacturer" Type="String">TestFoilMfg</Property>
+      <Property Name="Name" Type="String">Foil Name</Property>
+      <Property Name="Thickness" Type="DimValue" Dimension="Length">0.035mm</Property>
+    </Entity>
+    <!-- OSP Finish -->
+    <Entity Id="0f8e1e13-a298-4fb3-8d82-9b25b47aabd9" TypeId="d782f951-a176-457d-bef0-463bd4d45ad7" RevisionId="1c4d9fa0-2ce9-4025-aaaa-d4b78c1964d4" RevisionDate="2022-03-20T16:48:37.2478052Z">
+      <Property Name="Thickness" Type="DimValue" Dimension="Length">0.1mm</Property>
+      <Property Name="Process" Type="String">osp</Property>
+      <Property Name="Material" Type="String">OSP Material</Property>
+      <Property Name="Color" Type="System.Windows.Media.Color, PresentationCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">#FFEA9999</Property>
+    </Entity>
+    <!-- isn finish -->
+    <Entity Id="62e52e91-b5b7-4768-a645-65b2342c9736" TypeId="4dcb0c85-3a3d-4462-9e84-a89dc57f4b84" RevisionId="0250eb32-98f6-4b6e-a9bb-95aa0690aeb4" RevisionDate="2022-03-20T16:48:37.2473039Z">
+      <Property Name="Thickness" Type="DimValue" Dimension="Length">1mm</Property>
+      <Property Name="Process" Type="String">ISn</Property>
+      <Property Name="Material" Type="String">isnnn</Property>
+      <Property Name="Color" Type="System.Windows.Media.Color, PresentationCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">#FFCCCCCC</Property>
+    </Entity>
+    <!-- iau finish -->
+    <Entity Id="4dde6d40-f466-4a2f-aebe-edb996726c09" TypeId="0800b1d6-17ee-40e9-adba-334c59a1066e" RevisionId="df3b8e29-f0db-417e-ac5e-67f38cc7b2c0" RevisionDate="2022-03-20T16:48:37.2473039Z">
+      <Property Name="Thickness" Type="DimValue" Dimension="Length">0.1mm</Property>
+      <Property Name="Process" Type="String">IAu</Property>
+      <Property Name="Material" Type="String">iau</Property>
+      <Property Name="Color" Type="System.Windows.Media.Color, PresentationCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">#FF666666</Property>
+    </Entity>
+    <!-- HASL finish -->
+    <Entity Id="115b3105-d65f-46bc-8110-725897f7327e" TypeId="e8b99bb8-b51f-4a6e-a0fc-7439b27f8c76" RevisionId="411eec1f-487a-4aab-b209-e98dcff04401" RevisionDate="2022-03-20T16:48:37.2473039Z">
+      <Property Name="Thickness" Type="DimValue" Dimension="Length">0.001mm</Property>
+      <Property Name="Process" Type="String">hasltest</Property>
+      <Property Name="Material" Type="String">Lead Free Test</Property>
+      <Property Name="Color" Type="System.Windows.Media.Color, PresentationCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">#FFFF9900</Property>
+    </Entity>
+    <!-- ENIG Finish -->
+    <Entity Id="6c74d428-05d0-4df4-a8d4-872739370aa7" TypeId="b6b5d288-d4b3-4b60-857f-b949da02a37a" RevisionId="647d175c-5ec2-48fc-8253-ad5c228a61e5" RevisionDate="2022-03-20T16:48:37.2473039Z">
+      <Property Name="Thickness" Type="DimValue" Dimension="Length">0.1mm</Property>
+      <Property Name="Process" Type="String">enigtest</Property>
+      <Property Name="Material" Type="String">Goooooold</Property>
+      <Property Name="Color" Type="System.Windows.Media.Color, PresentationCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">#FFFF0000</Property>
+    </Entity>
+    <!-- Core -->
+    <Entity Id="a8b64c8c-a7a0-42df-947c-ff94a73a4103" TypeId="27d70fdc-4c4e-4774-bfac-7efbb48cde47" RevisionId="9cd560c2-5c4d-47df-be18-f33c0e74b817" RevisionDate="2022-03-20T16:48:37.2463034Z">
+      <Property Name="Constructions" Type="String">1080</Property>
+      <Property Name="Resin" Type="DimValue" Dimension="Relative">40%</Property>
+      <Property Name="Frequency" Type="DimValue" Dimension="Frequency">1GHz</Property>
+      <Property Name="DielectricConstant" Type="DimValue" Dimension="Dimensionless">4.36</Property>
+      <Property Name="LossTangent" Type="DimValue" Dimension="Dimensionless">0.01</Property>
+      <Property Name="GlassTransTemp" Type="DimValue" Dimension="Temperature">180C</Property>
+      <Property Name="Manufacturer" Type="String">Test mfgr</Property>
+      <Property Name="Name" Type="String">Core Product Name</Property>
+      <Property Name="Thickness" Type="DimValue" Dimension="Length">0.5mm</Property>
+    </Entity>
+    <!-- PrePreg -->
+    <Entity Id="206b4f47-5a8d-42d4-95cc-3e5a961b51aa" TypeId="e04a4e7f-10f0-42df-add7-587710efd89e" RevisionId="3fffevb0-15a4-4be5-90f9-30df6eb698b5" RevisionDate="2022-03-20T16:48:37.2458038Z">
+      <Property Name="Constructions" Type="String">2113</Property>
+      <Property Name="Resin" Type="DimValue" Dimension="Relative">50%</Property>
+      <Property Name="Frequency" Type="DimValue" Dimension="Frequency">1GHz</Property>
+      <Property Name="DielectricConstant" Type="DimValue" Dimension="Dimensionless">4.00</Property>
+      <Property Name="LossTangent" Type="DimValue" Dimension="Dimensionless">0.001</Property>
+      <Property Name="GlassTransTemp" Type="DimValue" Dimension="Temperature">180C</Property>
+      <Property Name="Manufacturer" Type="String">Manufacturer</Property>
+      <Property Name="Name" Type="String">Prepreg product name</Property>
+      <Property Name="Thickness" Type="DimValue" Dimension="Length">0.100mm</Property>
+    </Entity>
+  </Entities>
+  <EntityExtensions />
+</ExtensibleLibrary>
