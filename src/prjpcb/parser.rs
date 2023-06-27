@@ -9,8 +9,7 @@ pub fn parse_string(sec: &Properties, key: &str) -> String {
 
 pub fn parse_int(sec: &Properties, key: &str) -> i32 {
     sec.get(key)
-        .map(|v| v.parse().ok())
-        .flatten()
+        .and_then(|v| v.parse().ok())
         .unwrap_or_default()
 }
 

@@ -163,15 +163,13 @@ impl Document {
         let mut doc_sections: Vec<&str> = ini
             .sections()
             .filter_map(|nameopt| {
-                nameopt
-                    .map(|name| {
-                        if DOC_RE.is_match(name) {
-                            Some(name)
-                        } else {
-                            None
-                        }
-                    })
-                    .flatten()
+                nameopt.and_then(|name| {
+                    if DOC_RE.is_match(name) {
+                        Some(name)
+                    } else {
+                        None
+                    }
+                })
             })
             .collect();
 

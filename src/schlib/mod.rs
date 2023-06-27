@@ -200,7 +200,7 @@ impl SectionKeys {
 
         todo!("haven't yet found an example for this");
 
-        return Ok(Self { map });
+        Ok(Self { map })
     }
 }
 
