@@ -7,6 +7,8 @@ use crate::{
     Error,
 };
 
+use super::pin::Pin;
+
 #[derive(Clone, Debug, PartialEq)]
 #[repr(u32)]
 pub enum SchRecord {
@@ -46,6 +48,27 @@ pub enum SchRecord {
     ImplementationList(ImplementationList),
 }
 
+impl SchRecord {
+    pub fn parse(buf: &[u8]) {
+        // Indices of where we should break
+        let mut indices: Vec<usize> = (0..buf.len())
+            .filter(|idx| {
+                // Standard non-pin record
+                buf[*idx..].starts_with(b"|RECORD=")
+                // Separator within pins
+                || buf[*idx..].starts_with(b"|&|")
+                // Most reliable way to ID pins is by two empty bytes after a
+                // length indicator. This seems hacky though
+                || (buf.get(idx + 2).is_some() && buf[idx + 2..].starts_with(&[0x00; 2]))
+            })
+            .collect();
+        indices.sort();
+        indices.dedup();
+
+        // .starts_with(b"|ALLPINCOUNT="))
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u8)]
 enum PinType {
@@ -82,6 +105,7 @@ enum PinType {
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 1)]
 pub struct Component {
+    #[from_record(rename = b"LibReference")]
     libref: String,
     description: Option<String>,
     /// Number of parts
@@ -101,20 +125,12 @@ pub struct Component {
     part_id_locked: bool,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct Pin {
-    owner_index: u8,
-    owner_part_id: u8,
-}
-
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 3)]
 pub struct IeeeSymbol {
     owner_index: u8,
     /// bar bar
-    #[from_record(rename = b"bar")]
     owner_part_id: u8,
-    #[from_record(rename = b"foo")]
     is_not_accessible: bool,
 }
 

@@ -1,4 +1,5 @@
 mod params;
+mod pin;
 pub mod record;
 
 use std::fs::File;
