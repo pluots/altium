@@ -2,6 +2,7 @@ use std::str;
 use std::{num::ParseIntError, str::FromStr};
 
 use crate::errors::Error;
+use crate::parse::{FromUtf8, ParseUtf8};
 
 #[derive(Debug, PartialEq)]
 pub struct UniqueId([u8; 8]);
@@ -28,51 +29,28 @@ where
     Some((&buf[..pos], &buf[pos + 1..]))
 }
 
-/// Try to parse a utf8 buffer to an integer
-pub fn parse_utf8<T>(buf: &[u8]) -> Result<T, Error>
-where
-    T: FromStr<Err = ParseIntError>,
-{
-    let s = str::from_utf8(buf)?;
-    s.parse::<T>().map_err(|e| Error::ExpectedInt(s.into(), e))
-}
-
-/// Quick helper method
-pub fn buf2string(buf: &[u8]) -> Result<String, Error> {
-    Ok(str::from_utf8(buf)?.to_owned())
-}
-
-/// Quick helper method
-pub fn buf2string_lossy(buf: &[u8]) -> String {
+/// Quick helper method for a lossy string
+pub fn buf2lstring(buf: &[u8]) -> String {
     String::from_utf8_lossy(buf).to_string()
 }
 
-pub fn parse_bool(buf: &[u8]) -> Result<bool, Error> {
-    if buf == b"T" {
-        Ok(true)
-    } else if buf == b"F" {
-        Ok(false)
-    } else {
-        Err(Error::ExpectedBool(buf2string_lossy(buf)))
-    }
-}
-
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
     pub b: u8,
 }
 
-impl Color {
-    pub fn parse(buf: &[u8]) -> Result<Self, Error> {
-        if buf.len() != 3 {
-            Err(Error::ExpectedColor(buf.into()))
-        } else {
-            Ok(Self {
-                r: buf[0],
-                g: buf[1],
-                b: buf[2],
-            })
-        }
+impl FromUtf8 for Color {
+    fn from_utf8(buf: &[u8]) -> Result<Self, Error> {
+        const RMASK: u32 = 0x0000FF;
+        const GMASK: u32 = 0x00FF00;
+        const BMASK: u32 = 0xFF0000;
+        let num: u32 = buf.parse_utf8()?;
+        Ok(Self {
+            r: (num & RMASK).try_into().unwrap(),
+            g: (num & GMASK >> 8).try_into().unwrap(),
+            b: (num & BMASK >> 16).try_into().unwrap(),
+        })
     }
 }

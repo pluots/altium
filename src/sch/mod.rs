@@ -1,3 +1,5 @@
+mod params;
+
 use std::fs::File;
 use std::io::{self, Read, Seek};
 use std::path::Path;
@@ -5,6 +7,8 @@ use std::path::Path;
 use cfb::CompoundFile;
 
 use crate::errors::Error;
+
+pub use params::SheetStyle;
 
 /// Magic string found in the `FileHeader` stream
 const HEADER: &str = "HEADER=Protel for Windows - Schematic Library Editor Binary File Version 5.0";

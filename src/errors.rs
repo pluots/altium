@@ -17,6 +17,7 @@ pub enum Error {
     InvalidKey(String),
     ExpectedBool(String),
     ExpectedColor(Vec<u8>),
+    SheetStyle(u8),
 }
 
 impl fmt::Display for Error {
@@ -38,6 +39,7 @@ impl fmt::Display for Error {
             Error::InvalidKey(s) => write!(f, "invalid key found: `{s}`"),
             Error::ExpectedBool(s) => write!(f, "error parsing bool from `{s}`"),
             Error::ExpectedColor(v) => write!(f, "error parsing color from `{v:?}`"),
+            Error::SheetStyle(v) => write!(f, "invalid sheet style {v}"),
         }
     }
 }

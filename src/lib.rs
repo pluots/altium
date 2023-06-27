@@ -3,6 +3,7 @@
 mod common;
 pub mod errors;
 mod font;
+mod parse;
 pub mod pcb;
 pub mod pcblib;
 pub mod prjpcb;

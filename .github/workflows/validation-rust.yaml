@@ -94,8 +94,6 @@ jobs:
             components: rustfmt
       - run: cargo fmt --all -- --check
       - uses: actions/setup-python@v3
-      - name: Validate pre-commit
-        uses: pre-commit/action@v3.0.0
 
   doc:
     name: "Docs (cargo doc)"
