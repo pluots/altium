@@ -1,5 +1,3 @@
-//! Traits to help with parsing
-
 use crate::{common::buf2lstring, Error};
 use std::{
     num::ParseIntError,
@@ -48,6 +46,13 @@ impl FromUtf8 for bool {
 }
 
 impl FromUtf8 for u8 {
+    fn from_utf8(buf: &[u8]) -> Result<Self, Error> {
+        let s = str::from_utf8(buf)?;
+        s.parse().map_err(|e| Error::ExpectedInt(s.into(), e))
+    }
+}
+
+impl FromUtf8 for i8 {
     fn from_utf8(buf: &[u8]) -> Result<Self, Error> {
         let s = str::from_utf8(buf)?;
         s.parse().map_err(|e| Error::ExpectedInt(s.into(), e))

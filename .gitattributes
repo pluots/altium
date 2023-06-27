@@ -21,6 +21,6 @@
 *.zip filter=lfs diff=lfs merge=lfs -text
 
 # Paths containing extensionless binary files that we also want to LFS
-tests/samples/extracted filter=lfs diff=lfs merge=lfs -text
-tests/samples/graphics filter=lfs diff=lfs merge=lfs -text
-tests/samples/screenshots filter=lfs diff=lfs merge=lfs -text
+**/tests/samples/extracted filter=lfs diff=lfs merge=lfs -text
+**/tests/samples/graphics filter=lfs diff=lfs merge=lfs -text
+**/tests/samples/screenshots filter=lfs diff=lfs merge=lfs -text

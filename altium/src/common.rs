@@ -34,7 +34,7 @@ pub fn buf2lstring(buf: &[u8]) -> String {
     String::from_utf8_lossy(buf).to_string()
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Color {
     pub r: u8,
     pub g: u8,

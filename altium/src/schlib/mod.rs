@@ -1,4 +1,5 @@
 mod section_keys;
+
 use crate::common::{buf2lstring, split_altium_map, split_once, Color};
 use crate::errors::Error;
 use crate::font::Font;
@@ -212,21 +213,5 @@ impl ComponentMeta {
 
     pub fn part_countr(&self) -> u16 {
         self.part_count
-    }
-}
-
-pub struct Component {
-    meta: ComponentMeta,
-}
-
-impl Component {
-    /// Get the metadata for this component
-    pub fn meta(&self) -> &ComponentMeta {
-        &self.meta
-    }
-
-    /// Parse a stream to
-    fn parse(buf: &[u8]) -> Result<Self, Error> {
-        todo!()
     }
 }
