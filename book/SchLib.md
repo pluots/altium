@@ -30,4 +30,20 @@ z
 
 ## `Storage`
 
-Seems to contain binary data related to the entire library
+I got _so_ lucky with this one! It seems like this is filled with a repeating storage
+along these lines:
+
+```
+File name
+length: u16
+data: [u8; length]
+```
+
+And then data is zlib compressed! That was the tricky thing to figure out,
+I just happened to notice the bytes `78 9C` were in every file, and the magic bytes list
+happened to list that as zstd default compression.
+
+It seems like after extracting the data, there is both a BMP and JPEG together? I am unsure.
+
+![image](https://github.com/pluots/altium-rs/assets/13724985/2dc948fc-c77b-43cd-89d6-6c762d6148c9)
+
