@@ -1,9 +1,12 @@
+//! Parameter types stored in a schematic
+
 use crate::{
     parse::{FromUtf8, ParseUtf8},
-    Error,
+    ErrorKind,
 };
 
 /// Sheet paper style,
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum SheetStyle {
     /// 292.1 mm x 193.0 mm sheet (1150x760 mil)
@@ -46,7 +49,7 @@ pub enum SheetStyle {
 }
 
 impl TryFrom<u8> for SheetStyle {
-    type Error = Error;
+    type Error = ErrorKind;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         let res = match value {
@@ -68,7 +71,7 @@ impl TryFrom<u8> for SheetStyle {
             x if x == Self::OrCadC as u8 => Self::OrCadC,
             x if x == Self::OrCadD as u8 => Self::OrCadD,
             x if x == Self::OrCadE as u8 => Self::OrCadE,
-            _ => return Err(Error::SheetStyle(value)),
+            _ => return Err(ErrorKind::SheetStyle(value)),
         };
 
         Ok(res)
@@ -76,8 +79,51 @@ impl TryFrom<u8> for SheetStyle {
 }
 
 impl FromUtf8 for SheetStyle {
-    fn from_utf8(buf: &[u8]) -> Result<Self, Error> {
-        let num: u8 = buf.parse_utf8()?;
+    fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
+        let num: u8 = buf.parse_as_utf8()?;
+        num.try_into()
+    }
+}
+
+/// Allowed text alignments
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum Justification {
+    #[default]
+    BottomLeft = 0,
+    BottomCenter = 1,
+    BottomRight = 2,
+    CenterLeft = 3,
+    CenterCenter = 4,
+    CenterRight = 5,
+    TopLeft = 6,
+    TopCenter = 7,
+    TopRight = 8,
+}
+
+impl TryFrom<u8> for Justification {
+    type Error = ErrorKind;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        let res = match value {
+            x if x == Self::BottomLeft as u8 => Self::BottomLeft,
+            x if x == Self::BottomCenter as u8 => Self::BottomCenter,
+            x if x == Self::BottomRight as u8 => Self::BottomRight,
+            x if x == Self::CenterLeft as u8 => Self::CenterLeft,
+            x if x == Self::CenterCenter as u8 => Self::CenterCenter,
+            x if x == Self::CenterRight as u8 => Self::CenterRight,
+            x if x == Self::TopLeft as u8 => Self::TopLeft,
+            x if x == Self::TopCenter as u8 => Self::TopCenter,
+            x if x == Self::TopRight as u8 => Self::TopRight,
+            _ => return Err(ErrorKind::Justification(value)),
+        };
+
+        Ok(res)
+    }
+}
+
+impl FromUtf8 for Justification {
+    fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
+        let num: u8 = buf.parse_as_utf8()?;
         num.try_into()
     }
 }

@@ -1,15 +1,36 @@
+//! Tools for to reading and writing files produced by Altium Designer.
+//!
+//! It is very early in development, so please expect surprises if you are using
+//! it!
+
 #![allow(unused)]
+#![warn(clippy::pedantic)]
+#![allow(clippy::unreadable_literal)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::struct_excessive_bools)]
+#![allow(clippy::missing_panics_doc)]
 
 mod common;
-pub mod errors;
+mod draw;
 mod font;
+mod logging;
 mod parse;
-pub mod pcb;
-pub mod pcblib;
-pub mod prjpcb;
-pub mod sch;
-pub mod schlib;
 
-pub use errors::Error;
-pub use prjpcb::PrjPcb;
-pub use sch::Schematic;
+#[doc(hidden)]
+pub mod __private;
+pub mod dwf;
+pub mod errors;
+pub mod pcb;
+pub mod prj;
+pub mod sch;
+
+#[doc(inline)]
+pub use errors::{Error, ErrorKind};
+#[doc(inline)]
+pub use pcb::{PcbDoc, PcbLib};
+#[doc(inline)]
+pub use prj::PrjPcb;
+#[doc(inline)]
+pub use sch::{SchDoc, SchLib};
