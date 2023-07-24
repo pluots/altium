@@ -7,7 +7,7 @@ use cfb::CompoundFile;
 use std::io::{Read, Seek};
 use std::str;
 
-use super::Header;
+use super::SchLibMeta;
 
 const STREAMNAME: &str = "SectionKeys";
 const PFX_LEN: usize = 5;
@@ -15,27 +15,27 @@ const SFX: &[u8] = &[0x00];
 const LIBREF: &[u8] = b"LibRef";
 const SECKEY: &[u8] = b"SectionKey";
 
-/// Update a header with section keys
-pub fn update_section_keys<F: Read + Seek>(
+/// Update a header with section keys.
+pub(crate) fn update_section_keys<F: Read + Seek>(
     cfile: &mut CompoundFile<F>,
-    buf: &mut Vec<u8>,
-    header: &mut Header,
+    tmp_buf: &mut Vec<u8>,
+    header: &mut SchLibMeta,
 ) -> Result<(), Error> {
     if !cfile.exists(STREAMNAME) {
         return Ok(());
     }
 
     let mut stream = cfile.open_stream(STREAMNAME)?;
-    stream.read_to_end(buf)?;
+    stream.read_to_end(tmp_buf)?;
 
-    let to_parse = buf
+    let to_parse = tmp_buf
         .get(PFX_LEN..)
         .ok_or(ErrorKind::new_invalid_stream(STREAMNAME, 0))?
         .strip_suffix(SFX)
-        .ok_or(ErrorKind::new_invalid_stream(STREAMNAME, buf.len()))?;
+        .ok_or(ErrorKind::new_invalid_stream(STREAMNAME, tmp_buf.len()))?;
 
     // libref -> section key
-    let mut map: Vec<(Box<str>, String)> = Vec::new();
+    let mut map: Vec<(&str, &str)> = Vec::new();
 
     for (key, val) in split_altium_map(to_parse) {
         match key {
@@ -53,10 +53,11 @@ pub fn update_section_keys<F: Read + Seek>(
     }
 
     for comp in &mut header.components {
-        let Ok(idx) = map.binary_search_by_key(&comp.libref(), |x| &x.0) else {
+        // Find any keys that exist in our map
+        let Ok(idx) = map.binary_search_by_key(&comp.libref(), |x| x.0) else {
             continue;
         };
-        comp.sec_key = map[idx].1.clone();
+        comp.sec_key = map[idx].1.into();
     }
 
     Ok(())

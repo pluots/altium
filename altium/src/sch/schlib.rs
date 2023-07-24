@@ -24,7 +24,7 @@ pub struct SchLib<F> {
     cfile: RefCell<CompoundFile<F>>,
     /// Information contained in the compound file header. We use this as a
     /// lookup to see what we can extract from the file.
-    header: Header,
+    header: SchLibMeta,
     storage: Storage,
 }
 
@@ -47,20 +47,15 @@ impl<'a> SchLib<Cursor<&'a [u8]>> {
 
 impl<F: Read + Seek> SchLib<F> {
     /// Unique ID of this schematic library
-    pub fn unique_id(&self) -> Option<&str> {
+    fn unique_id(&self) -> Option<&str> {
         self.header.unique_id.as_deref()
     }
 
-    /// Information on available components, available without an exclusive lock
-    ///
-    /// This includes thing slike librefs (names) and descriptions
-    pub fn components_meta(&self) -> &[ComponentMeta] {
+    /// Get information about this file in general. Use this if you want to get
+    /// the libref or description of a component, or check what components
+    /// exist.
+    pub fn component_meta(&self) -> &[ComponentMeta] {
         &self.header.components
-    }
-
-    /// Fonts used in this library
-    pub fn fonts(&self) -> &[Font] {
-        &self.header.fonts
     }
 
     /// Lookup a single component by its libref
@@ -79,7 +74,7 @@ impl<F: Read + Seek> SchLib<F> {
             .header
             .components
             .iter()
-            .find(|meta| meta.libref == libref)
+            .find(|meta| &*meta.libref == libref)
         else {
             return Ok(None);
         };
@@ -110,7 +105,7 @@ impl<F: Read + Seek> SchLib<F> {
         Ok(Some(comp))
     }
 
-    /// Create an iterator over all components
+    /// Create an iterator over all components in this library.
     pub fn components(&self) -> ComponentsIter<'_, F> {
         ComponentsIter {
             schlib: self,
@@ -118,12 +113,17 @@ impl<F: Read + Seek> SchLib<F> {
         }
     }
 
+    /// Create an iterator over all fonts stored in this library.
+    pub fn fonts(&self) -> impl Iterator<Item = &Font> {
+        self.header.fonts.0.iter()
+    }
+
     /// Create a `SchLib` representation from any `Read`able compound file.
     fn from_cfile(mut cfile: CompoundFile<F>) -> Result<Self, Error> {
-        let mut buf: Vec<u8> = Vec::new();
-        let mut header = Header::parse(&mut cfile, &mut buf)?;
-        buf.clear();
-        update_section_keys(&mut cfile, &mut buf, &mut header)?;
+        let mut tmp_buf: Vec<u8> = Vec::new();
+        let mut header = SchLibMeta::parse(&mut cfile, &mut tmp_buf)?;
+        tmp_buf.clear();
+        update_section_keys(&mut cfile, &mut tmp_buf, &mut header)?;
         // section_keys.map.entry(key)
         Ok(Self {
             header,
@@ -151,7 +151,7 @@ impl<'a, F: Read + Seek> Iterator for ComponentsIter<'a, F> {
     type Item = Component;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let meta = self.schlib.components_meta();
+        let meta = self.schlib.component_meta();
         if self.current >= meta.len() {
             None
         } else {
@@ -171,7 +171,7 @@ impl<'a, F: Read + Seek> Iterator for ComponentsIter<'a, F> {
 /// Information contained within the `FileHeader` stream. These are things we
 /// can look up directly, without needing to page the entire file.
 #[derive(Clone, Debug, Default)]
-pub struct Header {
+pub(crate) struct SchLibMeta {
     weight: u32,
     minor_version: u8,
     /// Unique id of this schlib
@@ -201,7 +201,7 @@ pub struct Header {
 }
 
 /// Parse implementation
-impl Header {
+impl SchLibMeta {
     const STREAMNAME: &str = "FileHeader";
 
     /// Magic header found in all streams
@@ -294,7 +294,7 @@ impl Header {
                 }
                 x if x.starts_with(Self::COMP_LIBREF_PFX) => {
                     let idx: usize = key[Self::COMP_LIBREF_PFX.len()..].parse_as_utf8()?;
-                    let tmp: String = val.parse_as_utf8()?;
+                    let tmp: Box<str> = val.parse_as_utf8()?;
                     ret.components[idx].libref = tmp.clone();
                     ret.components[idx].sec_key = tmp;
                 }
@@ -327,11 +327,11 @@ impl Header {
 #[derive(Clone, Debug, Default)]
 pub struct ComponentMeta {
     /// Name of the thing in Altium
-    libref: String,
+    libref: Box<str>,
     /// Name of the thing in our OLE file
-    sec_key: String,
+    sec_key: Box<str>,
     /// Description
-    description: String,
+    description: Box<str>,
     // FIXME: what is this?
     part_count: u16,
 }
@@ -350,7 +350,7 @@ impl ComponentMeta {
     /// Number of subparts within a component
     ///
     /// FIXME: this seems to be doubled?
-    pub fn part_count(&self) -> u16 {
+    fn part_count(&self) -> u16 {
         self.part_count
     }
 }

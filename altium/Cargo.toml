@@ -2,8 +2,7 @@
 name = "altium"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "Apache-2.0"
 
 [dependencies]
 altium-macros = { path = "../altium-macros" }
@@ -17,6 +16,6 @@ rust-ini = "0.19.0"
 serde = "1.0.164"
 serde-xml-rs = "0.6.0"
 svg = "0.13.1"
-# svg = "0.13.1"
 uuid = { version = "1.4.0", features = ["v1", "v4", "fast-rng"]}
 xml-rs = "0.8.14"
+

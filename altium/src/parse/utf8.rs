@@ -9,38 +9,44 @@ use std::str;
 
 /// Extension trait for `&[u8]` that will parse a string as utf8/ASCII for
 /// anything implementing `FromUtf8`
-pub trait ParseUtf8 {
+pub trait ParseUtf8<'a> {
     /// Parse this as utf8 to whatever the target type is
-    fn parse_as_utf8<T: FromUtf8>(self) -> Result<T, ErrorKind>;
+    fn parse_as_utf8<T: FromUtf8<'a>>(self) -> Result<T, ErrorKind>;
 }
 
 /// Trait saying that a type can be created from a utf8/ASCII string.
 ///
 /// Implement this on anything we want to `buf.parse_as_utf8()` from
-pub trait FromUtf8: Sized {
+pub trait FromUtf8<'a>: Sized {
     /// Parse an entire buffer as this type
-    fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind>;
+    fn from_utf8(buf: &'a [u8]) -> Result<Self, ErrorKind>;
 }
 
-impl<'a> ParseUtf8 for &'a [u8] {
-    fn parse_as_utf8<T: FromUtf8>(self: &'a [u8]) -> Result<T, ErrorKind> {
+impl<'a> ParseUtf8<'a> for &'a [u8] {
+    fn parse_as_utf8<T: FromUtf8<'a>>(self: &'a [u8]) -> Result<T, ErrorKind> {
         T::from_utf8(self)
     }
 }
 
-impl FromUtf8 for String {
+impl<'a> FromUtf8<'a> for &'a str {
+    fn from_utf8(buf: &'a [u8]) -> Result<Self, ErrorKind> {
+        Ok(str::from_utf8(buf)?)
+    }
+}
+
+impl FromUtf8<'_> for String {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         Ok(str::from_utf8(buf)?.to_owned())
     }
 }
 
-impl FromUtf8 for Box<str> {
+impl FromUtf8<'_> for Box<str> {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         Ok(str::from_utf8(buf)?.into())
     }
 }
 
-impl FromUtf8 for bool {
+impl FromUtf8<'_> for bool {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         if buf == b"T" {
             Ok(true)
@@ -52,49 +58,49 @@ impl FromUtf8 for bool {
     }
 }
 
-impl FromUtf8 for u8 {
+impl FromUtf8<'_> for u8 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         let s = str::from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }
 
-impl FromUtf8 for i8 {
+impl FromUtf8<'_> for i8 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         let s = str::from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }
 
-impl FromUtf8 for u16 {
+impl FromUtf8<'_> for u16 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         let s = str::from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }
 
-impl FromUtf8 for i16 {
+impl FromUtf8<'_> for i16 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         let s = str::from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }
 
-impl FromUtf8 for u32 {
+impl FromUtf8<'_> for u32 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         let s = str::from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }
 
-impl FromUtf8 for i32 {
+impl FromUtf8<'_> for i32 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         let s = str::from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }
 
-impl FromUtf8 for usize {
+impl FromUtf8<'_> for usize {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         let s = str::from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
