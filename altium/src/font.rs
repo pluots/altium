@@ -1,11 +1,11 @@
-//! Common font-related things
+//! Objects related to font as Altium sees it.
 
 use std::ops::Deref;
 
 /// A font that is stored in a library
 #[derive(Clone, Debug, Default)]
 pub struct Font {
-    pub(crate) name: String,
+    pub(crate) name: Box<str>,
     pub(crate) size: u16,
 }
 

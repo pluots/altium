@@ -34,13 +34,27 @@ fn test_draw_svgs() {
     fs::create_dir_all(&out_dir).unwrap();
 
     let comp = schlib.get_component("CombinedPinsRectGraphic").unwrap();
-    // for comp in schlib.components().filter(|c|c.name()=="CombinedPinsRectGraphic") {
-    // dbg!(&comp);
     let node = comp.svg();
     let mut out_path = out_dir.clone();
     out_path.push(format!("{}.svg", comp.name().replace(' ', "_")));
     svg::save(&out_path, &node).unwrap();
-    // }
+
+    dbg!(altium::__private::num_unsupported_keys());
+}
+
+#[test]
+fn test_draw_all_svgs() {
+    let schlib = SchLib::open(SCHLIB_SIMPLE).unwrap();
+    let mut out_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    out_dir.extend(["test_output", "svg"]);
+    fs::create_dir_all(&out_dir).unwrap();
+
+    for comp in schlib.components() {
+        let node = comp.svg();
+        let mut out_path = out_dir.clone();
+        out_path.push(format!("{}.svg", comp.name().replace(' ', "_")));
+        svg::save(&out_path, &node).unwrap();
+    }
 
     dbg!(altium::__private::num_unsupported_keys());
 }

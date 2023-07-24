@@ -7,6 +7,9 @@ use crate::sch::pin::SchPin;
 use crate::sch::record::parse_any_record;
 use crate::Error;
 use core::fmt::Write;
+use std::fs::File;
+use std::io;
+use std::path::Path;
 use std::sync::Arc;
 use svg::node::element::SVG as Svg;
 
@@ -42,6 +45,12 @@ impl Component {
             record.draw_svg(&mut draw, &self.fonts.0);
         }
         draw.svg()
+    }
+
+    /// Draw this component to a SVG and write it to a file
+    pub fn save_svg<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
+        let file = File::open(path)?;
+        svg::write(&file, &self.svg())
     }
 
     pub fn name(&self) -> &str {

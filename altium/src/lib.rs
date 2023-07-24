@@ -14,7 +14,6 @@
 
 mod common;
 mod draw;
-mod font;
 mod logging;
 mod parse;
 
@@ -22,6 +21,7 @@ mod parse;
 pub mod __private;
 pub mod dwf;
 pub mod errors;
+pub mod font;
 pub mod pcb;
 pub mod prj;
 pub mod sch;
@@ -34,3 +34,9 @@ pub use pcb::{PcbDoc, PcbLib};
 pub use prj::PrjPcb;
 #[doc(inline)]
 pub use sch::{SchDoc, SchLib};
+
+#[cfg(doctest)]
+mod readme_tests {
+    #[doc = include_str!("../../README.md")]
+    struct MainReadMe;
+}

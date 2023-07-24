@@ -1,5 +1,6 @@
 use crate::errors::{ErrorKind, TruncBuf};
 use crate::parse::{FromUtf8, ParseUtf8};
+use std::str;
 
 /// Separator in textlike streams
 const SEP: u8 = b'|';
@@ -32,12 +33,17 @@ pub enum Visibility {
 pub struct UniqueId([u8; 8]);
 
 impl UniqueId {
-    pub fn from_slice<S: AsRef<[u8]>>(buf: S) -> Option<Self> {
+    pub(crate) fn from_slice<S: AsRef<[u8]>>(buf: S) -> Option<Self> {
         buf.as_ref().try_into().ok().map(Self)
+    }
+
+    /// Get this `UniqueId` as a string
+    pub fn as_str(&self) -> &str {
+        str::from_utf8(&self.0).expect("unique IDs should always be ASCII")
     }
 }
 
-impl FromUtf8 for UniqueId {
+impl FromUtf8<'_> for UniqueId {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         Ok(Self(buf.as_ref().try_into().map_err(|_| {
             ErrorKind::InvalidUniqueId(TruncBuf::truncate(buf))
@@ -92,7 +98,7 @@ impl Color {
     }
 }
 
-impl FromUtf8 for Color {
+impl FromUtf8<'_> for Color {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         const RMASK: u32 = 0x0000FF;
         const GMASK: u32 = 0x00FF00;
@@ -127,7 +133,7 @@ impl TryFrom<u8> for ReadOnlyState {
     }
 }
 
-impl FromUtf8 for ReadOnlyState {
+impl FromUtf8<'_> for ReadOnlyState {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         let num: u8 = buf.parse_as_utf8()?;
         num.try_into()

@@ -78,7 +78,7 @@ impl TryFrom<u8> for SheetStyle {
     }
 }
 
-impl FromUtf8 for SheetStyle {
+impl FromUtf8<'_> for SheetStyle {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         let num: u8 = buf.parse_as_utf8()?;
         num.try_into()
@@ -121,7 +121,7 @@ impl TryFrom<u8> for Justification {
     }
 }
 
-impl FromUtf8 for Justification {
+impl FromUtf8<'_> for Justification {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         let num: u8 = buf.parse_as_utf8()?;
         num.try_into()
