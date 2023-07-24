@@ -8,4 +8,4 @@ mod prjcfg;
 #[cfg(test)]
 mod tests;
 
-pub use prjcfg::PrjPcb;
+pub use prjcfg::{Document, PrjPcb};

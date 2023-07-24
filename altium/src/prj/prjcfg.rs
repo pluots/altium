@@ -4,6 +4,7 @@
 use super::parse::{parse_bool, parse_int, parse_string, parse_unique_id};
 use crate::common::UniqueId;
 use crate::errors::ErrorKind;
+use crate::Error;
 use ini::{Ini, Properties};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -32,29 +33,36 @@ pub struct PrjPcb {
 }
 
 impl PrjPcb {
-    pub fn design(&self) -> &Design {
+    fn design(&self) -> &Design {
         &self.design
     }
-    pub fn preferences(&self) -> Option<&Preferences> {
+
+    fn preferences(&self) -> Option<&Preferences> {
         self.preferences.as_ref()
     }
-    pub fn release(&self) -> Option<&Release> {
+
+    fn release(&self) -> Option<&Release> {
         self.release.as_ref()
     }
-    pub fn documents(&self) -> &Vec<Document> {
+
+    /// List all documents that are members of this project
+    pub fn documents(&self) -> &[Document] {
         &self.documents
     }
 
-    pub fn from_file<P: AsRef<Path>>(filename: P) -> Result<Self, ErrorKind> {
+    /// Open a `.PrjPcb` file
+    pub fn from_file<P: AsRef<Path>>(filename: P) -> Result<Self, Error> {
         let ini = Ini::load_from_file(filename)?;
         Self::from_ini(ini)
     }
-    pub fn from_string(s: &str) -> Result<Self, ErrorKind> {
+
+    /// Create this type from a string
+    pub fn from_string(s: &str) -> Result<Self, Error> {
         let ini = Ini::load_from_str(s)?;
         Self::from_ini(ini)
     }
 
-    pub fn from_ini(ini: Ini) -> Result<Self, ErrorKind> {
+    fn from_ini(ini: Ini) -> Result<Self, Error> {
         for (i, s) in ini.iter().take(10).enumerate() {
             eprintln!("{i}:\n{s:#?}\n");
         }
@@ -87,8 +95,6 @@ impl Debug for PrjPcb {
 }
 
 /// Design section of a `PrjPCB` file
-///
-/// This contains information
 #[non_exhaustive]
 #[derive(Debug, PartialEq)]
 pub struct Design {
@@ -137,6 +143,7 @@ impl Release {
     }
 }
 
+/// A single document located in a `.PrjPcb` file
 #[non_exhaustive]
 #[derive(Debug, PartialEq)]
 pub struct Document {
@@ -157,6 +164,16 @@ pub struct Document {
 }
 
 impl Document {
+    /// The path to this document
+    pub fn path(&self) -> &str {
+        &self.document_path
+    }
+
+    /// This document's unique ID
+    pub fn unique_id(&self) -> UniqueId {
+        self.document_unique_id
+    }
+
     /// Create a vector of `Document`s from an ini file
     fn from_prj_ini(ini: &Ini) -> Result<Vec<Self>, ErrorKind> {
         let mut doc_sections: Vec<&str> = ini

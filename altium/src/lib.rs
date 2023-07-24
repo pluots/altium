@@ -27,6 +27,8 @@ pub mod prj;
 pub mod sch;
 
 #[doc(inline)]
+pub use common::UniqueId;
+#[doc(inline)]
 pub use errors::{Error, ErrorKind};
 #[doc(inline)]
 pub use pcb::{PcbDoc, PcbLib};

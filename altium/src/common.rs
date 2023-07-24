@@ -1,6 +1,6 @@
 use crate::errors::{ErrorKind, TruncBuf};
 use crate::parse::{FromUtf8, ParseUtf8};
-use std::str;
+use std::{fmt, str};
 
 /// Separator in textlike streams
 const SEP: u8 = b'|';
@@ -28,8 +28,8 @@ pub enum Visibility {
 
 /// A unique ID
 ///
-/// TODO: figure out what file types use this exact format
-#[derive(Clone, Debug, Default, PartialEq)]
+// TODO: figure out what file types use this exact format
+#[derive(Clone, Copy, PartialEq)]
 pub struct UniqueId([u8; 8]);
 
 impl UniqueId {
@@ -40,6 +40,18 @@ impl UniqueId {
     /// Get this `UniqueId` as a string
     pub fn as_str(&self) -> &str {
         str::from_utf8(&self.0).expect("unique IDs should always be ASCII")
+    }
+}
+
+impl Default for UniqueId {
+    fn default() -> Self {
+        Self(*b"00000000")
+    }
+}
+
+impl fmt::Debug for UniqueId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("UniqueId").field(&self.as_str()).finish()
     }
 }
 
