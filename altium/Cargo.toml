@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/pluots/altium"
+description = "A library for processing Altium file types"
 
 [dependencies]
 altium-macros = { path = "../altium-macros" }
@@ -26,12 +27,13 @@ shared-version = true
 # Can't run replacements at workspace root. Need to use this "hacky" sort of way.
 [[package.metadata.release.pre-release-replacements]]
 file = "../CHANGELOG.md"
-search = "[Unreleased]"
+search = '\[Unreleased\]'
 replace = "[{{version}}]"
+exactly = 2
 
 [[package.metadata.release.pre-release-replacements]]
 file = "../CHANGELOG.md"
-search = "\\.\\.\\.HEAD"
+search = '\.\.\.HEAD'
 replace = "...{{tag_name}}"
 exactly = 1
 
