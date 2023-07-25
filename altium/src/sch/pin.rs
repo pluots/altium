@@ -4,7 +4,7 @@ use core::fmt;
 use std::str::{self, Utf8Error};
 
 use super::SchRecord;
-use crate::common::Visibility;
+use crate::common::{Location, Rotation, Visibility};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SchPin {
@@ -79,6 +79,31 @@ impl SchPin {
 
         Ok(SchRecord::Pin(retval))
     }
+
+    /// Nonconnecting point of this pin
+    pub(crate) fn location(&self) -> Location {
+        Location {
+            x: self.location_x,
+            y: self.location_y,
+        }
+    }
+
+    /// Altium stores the position of the pin at its non-connecting end. Which
+    /// seems dumb. This provides the connecting end.
+    pub(crate) fn location_conn(&self) -> Location {
+        let (x_orig, y_orig, len) = (
+            self.location_x,
+            self.location_y,
+            i32::try_from(self.length).unwrap(),
+        );
+        let (x, y) = match self.rotation {
+            Rotation::R0 => (x_orig + len, y_orig),
+            Rotation::R90 => (x_orig, y_orig - len),
+            Rotation::R180 => (x_orig - len, y_orig),
+            Rotation::R270 => (x_orig, y_orig + len),
+        };
+        Location { x, y }
+    }
 }
 
 fn sized_buf_to_utf8<'a>(
@@ -102,8 +127,8 @@ fn sized_buf_to_utf8<'a>(
 /// Returns `(rotation, designator_vis, name_vis)`
 fn get_rotation_and_hiding(val: u8) -> (Rotation, Visibility, Visibility) {
     const ROT_MASK: u8 = 0b00000011;
-    const HIDE_DES_MASK: u8 = 0b00001000;
-    const HIDE_NAME_MASK: u8 = 0b00010000;
+    const VIS_DES_MASK: u8 = 0b00001000;
+    const VIS_NAME_MASK: u8 = 0b00010000;
 
     let rotation = match val & ROT_MASK {
         x if x == Rotation::R0 as u8 => Rotation::R0,
@@ -113,28 +138,19 @@ fn get_rotation_and_hiding(val: u8) -> (Rotation, Visibility, Visibility) {
         _ => unreachable!("2-bit patterns covered"),
     };
 
-    let des_vis = if (val & HIDE_DES_MASK) == 0 {
-        Visibility::Visible
-    } else {
+    let des_vis = if (val & VIS_DES_MASK) == 0 {
         Visibility::Hidden
+    } else {
+        Visibility::Visible
     };
 
-    let name_vis = if (val & HIDE_NAME_MASK) == 0 {
-        Visibility::Visible
-    } else {
+    let name_vis = if (val & VIS_NAME_MASK) == 0 {
         Visibility::Hidden
+    } else {
+        Visibility::Visible
     };
 
     (rotation, des_vis, name_vis)
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum Rotation {
-    #[default]
-    R0 = 0,
-    R90 = 1,
-    R180 = 2,
-    R270 = 3,
 }
 
 fn _print_buf(buf: &[u8], s: &str) {

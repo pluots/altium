@@ -2,7 +2,7 @@ use std::borrow::ToOwned;
 
 use ini::Properties;
 
-use crate::{common::UniqueId, errors::ErrorKind};
+use crate::{common::UniqueId, error::ErrorKind};
 
 /// Parse a string or default to an empty string
 pub fn parse_string(sec: &Properties, key: &str) -> String {

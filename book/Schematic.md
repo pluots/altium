@@ -1,3 +1,7 @@
+# `SchDoc` and `SchLib`
+
+## `SchLib`
+
 A schematic library (`.SchLib`) is an OLE file with the following contents:
 
 ```text
@@ -11,7 +15,7 @@ A schematic library (`.SchLib`) is an OLE file with the following contents:
 ```
 
 
-## `FileHeader`
+### `FileHeader`
 
 Contains info about the file itself. Contents:
 
@@ -37,26 +41,7 @@ The content map is an [`AltiumMap`](Common.md#altiummap).
 |FontName2=Calibri
 ```
 
-## `Storage`
-
-I got _so_ lucky with this one! It seems like this is filled with a repeating storage
-along these lines:
-
-```
-File name
-length: u16
-data: [u8; length]
-```
-
-And then data is zlib compressed! That was the tricky thing to figure out,
-I just happened to notice the bytes `78 9C` were in every file, and the magic bytes list
-happened to list that as zstd default compression.
-
-It seems like after extracting the data, there is both a BMP and JPEG together? I am unsure.
-
-![image](https://github.com/pluots/altium-rs/assets/13724985/2dc948fc-c77b-43cd-89d6-6c762d6148c9)
-
-## `Data`
+### `Data`
 
 This contains binary data, sort of like this:
 
@@ -139,7 +124,7 @@ And the above repeats.
 
 Records start with an ID that identifies what it is representing.
 
-### Pins
+#### Pins
 
 There is a lot of unknown stuff here still, but I'm slowly piecing it
 together.
@@ -229,3 +214,36 @@ Example from `CombinedPins`
 020000000001000000000000 00              0107380A000000000000000000 01 [1               ] 01 [1]          00037C267C
 020000000001000000000000 00              0107380A000000F6FF00000000 01 [2               ] 01 [2]          00037C267C00B3000000
 ```
+
+### `Storage`
+
+It seems like the `Storage` is the following:
+
+- u32 `header length`
+- `header length` bytes of something like `|HEADER=Icon storage|Weight=6`,
+  includes null terminator. `Weight` seems to be the number of stored objects.
+  `Weight` is not included if it is empty.
+- Repeating:
+  - 4 bytes `content length`. It seems like, as with pins, the upper bit is set
+    to `1` to indicate binary storage (e.g. `DD 5C 02 01` and `A5 02 00 01`) 
+  - A byte `D0` that seems to always be the same. Magic?
+  - One byte length of the path name
+  - The path name, _no_ null termination
+  - 4 bytes u32 `payload length`
+  - `payload length` bytes of data, zlib compressed
+
+Interesting that it seems like the length of the whole thing is encoded twice in
+both `content length` and `payload length`.
+
+That was a lucky thing to figure out, I just happened to notice the bytes `78
+9C` were in every file, and the magic bytes list happened to list that as zstd
+default compression.
+
+It seems like after extracting the data, there is both a BMP and JPEG together? I am unsure.
+
+![image](https://github.com/pluots/altium-rs/assets/13724985/2dc948fc-c77b-43cd-89d6-6c762d6148c9)
+
+
+There is also some weirdness here. It seems like Altium changes images with
+transparant backgrounds to white? We manually make them transparant again, but
+it's weird that we have to do this.
