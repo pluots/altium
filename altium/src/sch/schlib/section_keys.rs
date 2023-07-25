@@ -1,13 +1,14 @@
+use std::io::{Read, Seek};
+use std::str;
+
+use cfb::CompoundFile;
+
+use super::SchLibMeta;
 use crate::common::split_altium_map;
 use crate::errors::ErrorKind;
 use crate::logging::log_unsupported_key;
 use crate::parse::ParseUtf8;
 use crate::Error;
-use cfb::CompoundFile;
-use std::io::{Read, Seek};
-use std::str;
-
-use super::SchLibMeta;
 
 const STREAMNAME: &str = "SectionKeys";
 const PFX_LEN: usize = 5;

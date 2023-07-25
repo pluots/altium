@@ -1,0 +1,5 @@
+group_imports = "StdExternalCrate"
+format_macro_matchers = true
+format_macro_bodies = true
+hex_literal_case = "Lower"
+imports_layout = "HorizontalVertical"

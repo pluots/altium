@@ -3,7 +3,6 @@ extern crate proc_macro;
 use std::collections::BTreeMap;
 
 use convert_case::{Case, Casing};
-
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Literal, TokenStream as TokenStream2, TokenTree};
 use quote::quote;

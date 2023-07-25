@@ -4,8 +4,9 @@
 //! Usually these are things where we have a binary file but part of it is utf8
 //! encoded.
 
-use crate::{common::buf2lstring, ErrorKind};
 use std::str;
+
+use crate::{common::buf2lstring, ErrorKind};
 
 /// Extension trait for `&[u8]` that will parse a string as utf8/ASCII for
 /// anything implementing `FromUtf8`

@@ -1,18 +1,20 @@
 #![allow(clippy::unnecessary_wraps)]
 #![allow(clippy::needless_pass_by_value)]
 
-use super::parse::{parse_bool, parse_int, parse_string, parse_unique_id};
-use crate::common::UniqueId;
-use crate::errors::ErrorKind;
-use crate::Error;
-use ini::{Ini, Properties};
-use lazy_static::lazy_static;
-use regex::Regex;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::Path;
+
+use ini::{Ini, Properties};
+use lazy_static::lazy_static;
+use regex::Regex;
 use uuid::Uuid;
+
+use super::parse::{parse_bool, parse_int, parse_string, parse_unique_id};
+use crate::common::UniqueId;
+use crate::errors::ErrorKind;
+use crate::Error;
 
 lazy_static! {
     /// `Document1`, `Document2`, etc

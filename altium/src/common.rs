@@ -1,6 +1,7 @@
+use std::{fmt, str};
+
 use crate::errors::{ErrorKind, TruncBuf};
 use crate::parse::{FromUtf8, ParseUtf8};
-use std::{fmt, str};
 
 /// Separator in textlike streams
 const SEP: u8 = b'|';
@@ -112,9 +113,9 @@ impl Color {
 
 impl FromUtf8<'_> for Color {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        const RMASK: u32 = 0x0000FF;
-        const GMASK: u32 = 0x00FF00;
-        const BMASK: u32 = 0xFF0000;
+        const RMASK: u32 = 0x0000ff;
+        const GMASK: u32 = 0x00ff00;
+        const BMASK: u32 = 0xff0000;
         let num: u32 = buf.parse_as_utf8()?;
         Ok(Self {
             r: (num & RMASK).try_into().unwrap(),

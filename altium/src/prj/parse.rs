@@ -1,5 +1,6 @@
-use ini::Properties;
 use std::borrow::ToOwned;
+
+use ini::Properties;
 
 use crate::{common::UniqueId, errors::ErrorKind};
 

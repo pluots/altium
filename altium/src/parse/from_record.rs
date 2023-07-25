@@ -1,7 +1,8 @@
 //! Trait for a common way to extract records
 
-use crate::{common::split_altium_map, errors::AddContext, sch::SchRecord, Error};
 use std::fmt::Write;
+
+use crate::{common::split_altium_map, errors::AddContext, sch::SchRecord, Error};
 
 /// Given a record with an ID, parse the items
 ///

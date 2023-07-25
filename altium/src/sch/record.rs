@@ -52,6 +52,13 @@
 //! don't need to do anything special.
 mod draw;
 
+use std::str;
+
+use altium_macros::FromRecord;
+use num_enum::TryFromPrimitive;
+
+use super::params::Justification;
+use super::pin::SchPin;
 use crate::common::{ReadOnlyState, UniqueId};
 use crate::errors::AddContext;
 use crate::Error;
@@ -60,12 +67,6 @@ use crate::{
     parse::{FromRecord, ParseUtf8},
     ErrorKind,
 };
-use altium_macros::FromRecord;
-use num_enum::TryFromPrimitive;
-use std::str;
-
-use super::params::Justification;
-use super::pin::SchPin;
 
 /// A schematic record may be any of the below items
 #[derive(Clone, Debug, PartialEq)]

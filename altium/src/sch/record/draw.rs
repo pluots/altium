@@ -1,12 +1,13 @@
 //! How to draw records, components, etc
+use svg::node::{element as el, Text};
+use svg::Node;
+
 use crate::common::{Color, Coords2};
 use crate::draw::{Draw, SvgCtx};
 use crate::font::Font;
 use crate::sch::params::Justification;
 use crate::sch::pin::{Rotation, SchPin};
 use crate::sch::record;
-use svg::node::{element as el, Text};
-use svg::Node;
 
 impl Draw for record::SchRecord {
     fn draw_svg(&self, svg: &mut SvgCtx, fonts: &[Font]) {
