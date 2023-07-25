@@ -131,11 +131,29 @@ impl From<ini::ParseError> for ErrorKind {
     }
 }
 
+impl From<ini::ParseError> for Error {
+    fn from(value: ini::ParseError) -> Self {
+        Self {
+            kind: ErrorKind::from(value).into(),
+            trace: Vec::new(),
+        }
+    }
+}
+
 impl From<ini::Error> for ErrorKind {
     fn from(value: ini::Error) -> Self {
         match value {
             ini::Error::Io(e) => Self::Io(e),
             ini::Error::Parse(e) => Self::IniFormat(Box::new(e)),
+        }
+    }
+}
+
+impl From<ini::Error> for Error {
+    fn from(value: ini::Error) -> Self {
+        Self {
+            kind: ErrorKind::from(value).into(),
+            trace: Vec::new(),
         }
     }
 }

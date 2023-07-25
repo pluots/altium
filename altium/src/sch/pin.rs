@@ -3,9 +3,8 @@
 use core::fmt;
 use std::str::{self, Utf8Error};
 
-use crate::common::Visibility;
-
 use super::SchRecord;
+use crate::common::Visibility;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SchPin {

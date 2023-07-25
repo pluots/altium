@@ -1,19 +1,20 @@
 //! Things related to the entire component
 
+use core::fmt::Write;
+use std::fs::File;
+use std::io;
+use std::path::Path;
+use std::sync::Arc;
+
+use svg::node::element::SVG as Svg;
+
+use super::SchRecord;
 use crate::draw::{Draw, SvgCtx};
 use crate::errors::AddContext;
 use crate::font::FontCollection;
 use crate::sch::pin::SchPin;
 use crate::sch::record::parse_any_record;
 use crate::Error;
-use core::fmt::Write;
-use std::fs::File;
-use std::io;
-use std::path::Path;
-use std::sync::Arc;
-use svg::node::element::SVG as Svg;
-
-use super::SchRecord;
 
 /// Representation of a component
 // TODO: should this just be "entry" or something? Not sure how it works with a

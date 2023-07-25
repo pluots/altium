@@ -1,19 +1,21 @@
 mod section_keys;
 
-use crate::common::{buf2lstring, split_altium_map, Color};
-use crate::errors::ErrorKind;
-use crate::font::{Font, FontCollection};
-use crate::parse::ParseUtf8;
-use crate::sch::{storage::Storage, Component, SheetStyle};
-use crate::Error;
-use cfb::CompoundFile;
-use section_keys::update_section_keys;
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::{Cursor, Read, Seek};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{fmt, str};
+
+use cfb::CompoundFile;
+use section_keys::update_section_keys;
+
+use crate::common::{buf2lstring, split_altium_map, Color, UniqueId};
+use crate::errors::ErrorKind;
+use crate::font::{Font, FontCollection};
+use crate::parse::ParseUtf8;
+use crate::sch::{storage::Storage, Component, SheetStyle};
+use crate::Error;
 
 /// Reasonable size for many pins
 const DATA_DEFAULT_CAP: usize = 200;
@@ -47,8 +49,8 @@ impl<'a> SchLib<Cursor<&'a [u8]>> {
 
 impl<F: Read + Seek> SchLib<F> {
     /// Unique ID of this schematic library
-    fn unique_id(&self) -> Option<&str> {
-        self.header.unique_id.as_deref()
+    fn unique_id(&self) -> UniqueId {
+        self.header.unique_id
     }
 
     /// Get information about this file in general. Use this if you want to get
@@ -175,7 +177,7 @@ pub(crate) struct SchLibMeta {
     weight: u32,
     minor_version: u8,
     /// Unique id of this schlib
-    unique_id: Option<Box<str>>,
+    unique_id: UniqueId,
     /// Table of fonts found in the header
     ///
     /// This is an `Arc` because we want other types to have an easy way to
@@ -264,7 +266,7 @@ impl SchLibMeta {
                 Self::HEADER_KEY => continue,
                 b"Weight" => ret.weight = val.parse_as_utf8()?,
                 b"MinorVersion" => ret.minor_version = val.parse_as_utf8()?,
-                b"UniqueID" => ret.unique_id = Some(val.parse_as_utf8()?),
+                b"UniqueID" => ret.unique_id = val.parse_as_utf8()?,
                 b"FontIdCount" => fonts = vec![Font::default(); val.parse_as_utf8()?],
                 b"UseMBCS" => ret.use_mbcs = val.parse_as_utf8()?,
                 b"IsBOC" => ret.is_boc = val.parse_as_utf8()?,

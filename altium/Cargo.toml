@@ -3,6 +3,7 @@ name = "altium"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
+repository = "https://github.com/pluots/altium"
 
 [dependencies]
 altium-macros = { path = "../altium-macros" }
@@ -11,11 +12,51 @@ flate2 = "1.0.26"
 lazy_static = "1.4.0"
 num_enum = "0.6.1"
 quick-xml = "0.29.0"
-regex = "1.8.4"
+regex = "1.9.1"
 rust-ini = "0.19.0"
-serde = "1.0.164"
+serde = "1.0.175"
 serde-xml-rs = "0.6.0"
 svg = "0.13.1"
-uuid = { version = "1.4.0", features = ["v1", "v4", "fast-rng"]}
-xml-rs = "0.8.14"
+uuid = { version = "1.4.1", features = ["v1", "v4", "fast-rng"]}
+xml-rs = "0.8.16"
 
+[package.metadata.release]
+shared-version = true
+
+# Can't run replacements at workspace root. Need to use this "hacky" sort of way.
+[[package.metadata.release.pre-release-replacements]]
+file = "../CHANGELOG.md"
+search = "[Unreleased]"
+replace = "[{{version}}]"
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../CHANGELOG.md"
+search = "\\.\\.\\.HEAD"
+replace = "...{{tag_name}}"
+exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../CHANGELOG.md"
+search = "ReleaseDate"
+replace = "{{date}}"
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../CHANGELOG.md"
+search = "<!-- next-header -->"
+replace = """\
+  <!-- next-header -->\n\n\
+  ## [Unreleased] - ReleaseDate\n\n\
+  ### Added\n\n\
+  ### Changed\n\n\
+  ### Removed\n\n\
+  """
+exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../CHANGELOG.md"
+search = "<!-- next-url -->"
+replace = """\
+  <!-- next-url -->\n\
+  [Unreleased]: https://github.com/pluots/altium/compare/{{tag_name}}...HEAD\
+  """
+exactly = 1
