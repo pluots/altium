@@ -7,7 +7,7 @@ repository = "https://github.com/pluots/altium"
 description = "A library for processing Altium file types"
 
 [dependencies]
-altium-macros = { path = "../altium-macros" }
+altium-macros = { path = "../altium-macros", version = "0.1.0" }
 cfb = "0.8.1"
 flate2 = "1.0.26"
 lazy_static = "1.4.0"
@@ -62,3 +62,9 @@ replace = """\
   [Unreleased]: https://github.com/pluots/altium/compare/{{tag_name}}...HEAD\
   """
 exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "Cargo.toml"
+# Need \d match so we don't accidentally match our pattern here
+search = 'altium-macros = \{ path = "../altium-macros", version = "\d.*" \}'
+replace = 'altium-macros = { path = "../altium-macros", version = "{{version}}" }'
