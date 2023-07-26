@@ -3,5 +3,12 @@ resolver = "2"
 members = [
     "altium",
     "altium-macros",
+    "adedit",
+    "ecadview"
     # "drawsvg",
+]
+default-members = [
+    "altium",
+    "altium-macros",
+    "adedit"
 ]
