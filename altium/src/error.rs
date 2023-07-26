@@ -68,19 +68,23 @@ pub enum ErrorKind {
     IniFormat(Box<ini::ParseError>),
     MissingSection(String),
     MissingUniqueId(String),
-    InvalidUniqueId(Box<[u8]>),
+    InvalidUniqueId(TruncBuf<u8>),
+    InvalidStorageData(TruncBuf<u8>),
     FileType(String, &'static str),
-    InvalidStream(String, usize),
+    InvalidStream(Box<str>, usize),
     RequiredSplit(String),
     Utf8(Utf8Error),
     ExpectedInt(String, ParseIntError),
-    InvalidKey(String),
+    InvalidKey(Box<str>),
+    InvalidHeader(Box<str>),
     ExpectedBool(String),
-    ExpectedColor(Box<u8>),
+    ExpectedColor(TruncBuf<u8>),
     SheetStyle(u8),
     ReadOnlyState(u8),
     Justification(u8),
     Pin(PinError),
+    BufferTooShort(usize, TruncBuf<u8>),
+    Image(image::ImageError),
 }
 
 impl fmt::Display for ErrorKind {
@@ -91,7 +95,7 @@ impl fmt::Display for ErrorKind {
             ErrorKind::MissingSection(e) => write!(f, "missing required section `{e}`"),
             ErrorKind::MissingUniqueId(e) => write!(f, "bad or missing unique ID section `{e}`"),
             ErrorKind::InvalidUniqueId(e) => {
-                write!(f, "invalid unique ID section `{}`", TruncBuf::new(e))
+                write!(f, "invalid unique ID section `{e}`")
             }
             ErrorKind::FileType(n, ty) => write!(f, "file `{n}` is not a valid {ty} file"),
             ErrorKind::InvalidStream(s, n) => {
@@ -100,15 +104,25 @@ impl fmt::Display for ErrorKind {
             ErrorKind::RequiredSplit(s) => {
                 write!(f, "expected key-value pair but couldn't split `{s}`")
             }
+            ErrorKind::InvalidStorageData(e) => {
+                write!(f, "invalid storage data near `{e:x}`")
+            }
             ErrorKind::Utf8(e) => write!(f, "utf8 error: {e}"),
+            ErrorKind::InvalidHeader(e) => write!(f, "invalid header '{e}'"),
             ErrorKind::ExpectedInt(s, e) => write!(f, "error parsing integer from `{s}`: {e}"),
             ErrorKind::InvalidKey(s) => write!(f, "invalid key found: `{s}`"),
             ErrorKind::ExpectedBool(s) => write!(f, "error parsing bool from `{s}`"),
-            ErrorKind::ExpectedColor(v) => write!(f, "error parsing color from `{v:?}`"),
+            ErrorKind::ExpectedColor(v) => write!(f, "error parsing color from `{v:x}`"),
             ErrorKind::SheetStyle(v) => write!(f, "invalid sheet style {v}"),
             ErrorKind::ReadOnlyState(v) => write!(f, "invalid readonly state {v}"),
             ErrorKind::Justification(v) => write!(f, "invalid justification state {v}"),
             ErrorKind::Pin(v) => write!(f, "error parsing pin: {v}"),
+            ErrorKind::BufferTooShort(v, b) => write!(
+                f,
+                "buffer too short: expected at least {v} elements but got {} near {b:x}",
+                b.len()
+            ),
+            ErrorKind::Image(e) => write!(f, "image error: {e}"),
         }
     }
 }
@@ -117,11 +131,15 @@ impl std::error::Error for ErrorKind {}
 
 impl ErrorKind {
     pub(crate) fn new_invalid_stream(name: &str, pos: usize) -> Self {
-        Self::InvalidStream(name.to_owned(), pos)
+        Self::InvalidStream(name.into(), pos)
     }
 
     pub(crate) fn new_invalid_key(key: &[u8]) -> Self {
-        Self::InvalidKey(String::from_utf8_lossy(key).to_string())
+        Self::InvalidKey(String::from_utf8_lossy(key).into())
+    }
+
+    pub(crate) fn new_invalid_header(header: &[u8]) -> Self {
+        Self::InvalidHeader(String::from_utf8_lossy(header).into())
     }
 }
 
@@ -197,6 +215,12 @@ impl From<PinError> for Error {
     }
 }
 
+impl From<image::ImageError> for ErrorKind {
+    fn from(value: image::ImageError) -> Self {
+        Self::Image(value)
+    }
+}
+
 /// This trait lets us throw random context on errors and make them brand new
 pub(crate) trait AddContext: Sized {
     type WithContext;
@@ -205,7 +229,7 @@ pub(crate) trait AddContext: Sized {
     fn context<C: Into<Box<str>>>(self, ctx: C) -> Self::WithContext;
 
     /// Add context that is lazily evaluated
-    fn then_context<F, C>(self, f: F) -> Self::WithContext
+    fn or_context<F, C>(self, f: F) -> Self::WithContext
     where
         F: FnOnce() -> C,
         C: Into<Box<str>>,
@@ -258,25 +282,82 @@ impl<T> AddContext for Result<T, ErrorKind> {
     }
 }
 
-/// Helper type for errors related to buffers
-pub(crate) struct TruncBuf<'a>(&'a [u8]);
+/// A subslice of a buffer for nicer error messages
+#[derive(Clone, Debug)]
+pub struct TruncBuf<T> {
+    buf: Box<[T]>,
+    orig_len: usize,
+    at_end: bool,
+}
 
-impl<'a> TruncBuf<'a> {
+impl<T: Clone + Copy> TruncBuf<T> {
     /// Truncate a buffer to 16 elements and box them. Useful for reporting errors
     /// on buffers that may be too large
     // FIXME: version: bounds loosened to `Clone`-only in 1.71
     // <https://github.com/rust-lang/rust/pull/103406>
-    pub fn truncate<T: Clone + Copy>(buf: &[T]) -> Box<[T]> {
+    pub(crate) fn truncate(buf: &[T]) -> Box<[T]> {
         buf[..min(buf.len(), 16)].into()
     }
 
-    pub fn new(buf: &'a [u8]) -> Self {
-        Self(buf)
+    pub(crate) fn truncate_end(buf: &[T]) -> Box<[T]> {
+        buf[buf.len().saturating_sub(16)..].into()
+    }
+
+    /// Print the leftmost elements
+    pub(crate) fn new(buf: &[T]) -> Self {
+        Self {
+            buf: Self::truncate(buf),
+            orig_len: buf.len(),
+            at_end: false,
+        }
+    }
+
+    /// Print the rightmost elements
+    pub(crate) fn new_end(buf: &[T]) -> Self {
+        Self {
+            buf: Self::truncate_end(buf),
+            orig_len: buf.len(),
+            at_end: true,
+        }
+    }
+
+    /// Length of the original buffer
+    pub(crate) fn len(&self) -> usize {
+        self.orig_len
     }
 }
 
-impl fmt::Display for TruncBuf<'_> {
+impl<T: Clone + Copy> From<&[T]> for TruncBuf<T> {
+    fn from(value: &[T]) -> Self {
+        Self::new(value)
+    }
+}
+
+impl<T: fmt::Debug> fmt::Display for TruncBuf<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_list().entries(self.0).entry(&"...").finish()
+        if self.at_end {
+            f.debug_list().entry(&{ .. }).entries(&*self.buf).finish()
+        } else {
+            f.debug_list().entries(&*self.buf).entry(&{ .. }).finish()
+        }
+    }
+}
+
+impl<T: fmt::LowerHex> fmt::LowerHex for TruncBuf<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[")?;
+
+        if self.at_end {
+            write!(f, "..")?;
+            for val in &*self.buf {
+                write!(f, ", {val:02x}")?;
+            }
+            write!(f, "]")
+        } else {
+            for val in &*self.buf {
+                write!(f, "{val:02x}, ")?;
+            }
+            write!(f, "..]")
+        }
     }
 }

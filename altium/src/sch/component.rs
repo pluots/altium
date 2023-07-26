@@ -8,9 +8,10 @@ use std::sync::Arc;
 
 use svg::node::element::SVG as Svg;
 
-use super::SchRecord;
+use super::storage::Storage;
+use super::{SchDrawCtx, SchRecord};
 use crate::draw::{Draw, SvgCtx};
-use crate::errors::AddContext;
+use crate::error::AddContext;
 use crate::font::FontCollection;
 use crate::sch::pin::SchPin;
 use crate::sch::record::parse_any_record;
@@ -23,7 +24,9 @@ use crate::Error;
 pub struct Component {
     pub(crate) name: Box<str>,
     pub(crate) records: Vec<SchRecord>,
+    // TODO: figure out how to combine these
     pub(crate) fonts: Arc<FontCollection>,
+    pub(crate) storage: Arc<Storage>,
 }
 
 impl Component {
@@ -31,19 +34,26 @@ impl Component {
         name: &str,
         buf: &[u8],
         fonts: Arc<FontCollection>,
+        storage: Arc<Storage>,
     ) -> Result<Self, Error> {
         Ok(Component {
             name: name.into(),
             records: parse_all_records(buf, name)?,
             fonts,
+            storage,
         })
     }
 
     /// Draw this component to a SVG
     pub fn svg(&self) -> Svg {
         let mut draw = SvgCtx::new();
+        let ctx = SchDrawCtx {
+            fonts: &self.fonts,
+            storage: &self.storage,
+        };
+
         for record in &self.records {
-            record.draw_svg(&mut draw, &self.fonts.0);
+            record.draw_svg(&mut draw, &ctx);
         }
         draw.svg()
     }
@@ -54,12 +64,14 @@ impl Component {
         svg::write(&file, &self.svg())
     }
 
+    /// The name of this part
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// This part's description
     pub fn description(&self) -> &str {
-        let md = self
+        let meta = self
             .records
             .iter()
             .find_map(|record| {
@@ -70,7 +82,7 @@ impl Component {
                 }
             })
             .expect("no metadata record");
-        md.description.as_deref().unwrap_or("")
+        meta.description.as_deref().unwrap_or("")
     }
 }
 

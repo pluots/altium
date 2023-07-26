@@ -55,12 +55,13 @@ mod draw;
 use std::str;
 
 use altium_macros::FromRecord;
+pub use draw::SchDrawCtx;
 use num_enum::TryFromPrimitive;
 
 use super::params::Justification;
 use super::pin::SchPin;
 use crate::common::{ReadOnlyState, UniqueId};
-use crate::errors::AddContext;
+use crate::error::AddContext;
 use crate::Error;
 use crate::{
     common::Color,
@@ -305,6 +306,7 @@ pub struct Rectangle {
     location_y: i32,
     owner_index: u8,
     owner_part_id: i8,
+    owner_part_display_mode: i8,
     unique_id: UniqueId,
 }
 

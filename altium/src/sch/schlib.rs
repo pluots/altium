@@ -11,7 +11,7 @@ use cfb::CompoundFile;
 use section_keys::update_section_keys;
 
 use crate::common::{buf2lstring, split_altium_map, Color, UniqueId};
-use crate::errors::ErrorKind;
+use crate::error::ErrorKind;
 use crate::font::{Font, FontCollection};
 use crate::parse::ParseUtf8;
 use crate::sch::{storage::Storage, Component, SheetStyle};
@@ -27,7 +27,7 @@ pub struct SchLib<F> {
     /// Information contained in the compound file header. We use this as a
     /// lookup to see what we can extract from the file.
     header: SchLibMeta,
-    storage: Storage,
+    storage: Arc<Storage>,
 }
 
 /// Impls that are specific to a file
@@ -102,7 +102,12 @@ impl<F: Read + Seek> SchLib<F> {
             stream.read_to_end(&mut buf).unwrap();
         }
 
-        let comp = Component::from_buf(libref, &buf, Arc::clone(&self.header.fonts))?;
+        let comp = Component::from_buf(
+            libref,
+            &buf,
+            Arc::clone(&self.header.fonts),
+            Arc::clone(&self.storage),
+        )?;
 
         Ok(Some(comp))
     }
@@ -117,20 +122,31 @@ impl<F: Read + Seek> SchLib<F> {
 
     /// Create an iterator over all fonts stored in this library.
     pub fn fonts(&self) -> impl Iterator<Item = &Font> {
-        self.header.fonts.0.iter()
+        self.header.fonts.iter()
+    }
+
+    /// Get information about the blob items stored
+    pub fn storage(&self) -> &Storage {
+        &self.storage
     }
 
     /// Create a `SchLib` representation from any `Read`able compound file.
     fn from_cfile(mut cfile: CompoundFile<F>) -> Result<Self, Error> {
-        let mut tmp_buf: Vec<u8> = Vec::new();
-        let mut header = SchLibMeta::parse(&mut cfile, &mut tmp_buf)?;
+        let mut tmp_buf: Vec<u8> = Vec::new(); // scratch memory
+
+        let mut header = SchLibMeta::parse_cfile(&mut cfile, &mut tmp_buf)?;
         tmp_buf.clear();
+
+        let mut storage = Storage::parse_cfile(&mut cfile, &mut tmp_buf)?;
+        tmp_buf.clear();
+
         update_section_keys(&mut cfile, &mut tmp_buf, &mut header)?;
+
         // section_keys.map.entry(key)
         Ok(Self {
-            header,
             cfile: RefCell::new(cfile),
-            storage: Storage::default(),
+            header,
+            storage: storage.into(),
         })
     }
 }
@@ -158,7 +174,6 @@ impl<'a, F: Read + Seek> Iterator for ComponentsIter<'a, F> {
             None
         } else {
             let libref = meta[self.current].libref();
-            dbg!(libref);
             let ret = self
                 .schlib
                 .try_get_component(libref)
@@ -234,18 +249,22 @@ impl SchLibMeta {
     /// Validate a `FileHeader` and extract its information
     ///
     /// `buf` should be empty, we just reuse it to avoid reallocation
-    fn parse<F: Read + Seek>(
+    fn parse_cfile<F: Read + Seek>(
         cfile: &mut CompoundFile<F>,
-        buf: &mut Vec<u8>,
+        tmp_buf: &mut Vec<u8>,
     ) -> Result<Self, ErrorKind> {
         let mut stream = cfile.open_stream(Self::STREAMNAME)?;
-        stream.read_to_end(buf)?;
+        stream.read_to_end(tmp_buf)?;
 
-        let to_parse = buf
+        let to_parse = tmp_buf
             .get(Self::PFX_LEN..)
             .ok_or(ErrorKind::new_invalid_stream(Self::STREAMNAME, 0))?
             .strip_suffix(Self::SFX)
-            .ok_or(ErrorKind::new_invalid_stream(Self::STREAMNAME, buf.len()))?;
+            .ok_or(ErrorKind::new_invalid_stream(
+                Self::STREAMNAME,
+                tmp_buf.len(),
+            ))?;
+
         let sep_pos = to_parse
             .iter()
             .position(|b| *b == b'|')

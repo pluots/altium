@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 use super::parse::{parse_bool, parse_int, parse_string, parse_unique_id};
 use crate::common::UniqueId;
-use crate::errors::ErrorKind;
+use crate::error::ErrorKind;
 use crate::Error;
 
 lazy_static! {

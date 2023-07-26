@@ -1,6 +1,7 @@
 //! Parameter types stored in a schematic
 
 use crate::{
+    common::{PosHoriz, PosVert},
     parse::{FromUtf8, ParseUtf8},
     ErrorKind,
 };
@@ -85,7 +86,7 @@ impl FromUtf8<'_> for SheetStyle {
     }
 }
 
-/// Allowed text alignments
+/// Allowed text alignments in a schematic
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum Justification {
     #[default]
@@ -125,5 +126,21 @@ impl FromUtf8<'_> for Justification {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         let num: u8 = buf.parse_as_utf8()?;
         num.try_into()
+    }
+}
+
+impl From<Justification> for (PosHoriz, PosVert) {
+    fn from(value: Justification) -> Self {
+        match value {
+            Justification::BottomLeft => (PosHoriz::Left, PosVert::Bottom),
+            Justification::BottomCenter => (PosHoriz::Center, PosVert::Bottom),
+            Justification::BottomRight => (PosHoriz::Right, PosVert::Bottom),
+            Justification::CenterLeft => (PosHoriz::Left, PosVert::Middle),
+            Justification::CenterCenter => (PosHoriz::Center, PosVert::Middle),
+            Justification::CenterRight => (PosHoriz::Right, PosVert::Middle),
+            Justification::TopLeft => (PosHoriz::Left, PosVert::Top),
+            Justification::TopCenter => (PosHoriz::Center, PosVert::Top),
+            Justification::TopRight => (PosHoriz::Right, PosVert::Top),
+        }
     }
 }

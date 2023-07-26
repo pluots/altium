@@ -1,6 +1,6 @@
 use std::{fmt, str};
 
-use crate::errors::{ErrorKind, TruncBuf};
+use crate::error::{ErrorKind, TruncBuf};
 use crate::parse::{FromUtf8, ParseUtf8};
 
 /// Separator in textlike streams
@@ -9,14 +9,28 @@ const KV_SEP: u8 = b'=';
 
 /// Common coordinate type
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct Coords2 {
-    pub x: u8,
-    pub y: u8,
+pub struct Location {
+    pub x: i32,
+    pub y: i32,
 }
 
-impl Coords2 {
-    fn new(x: u8, y: u8) -> Self {
+impl Location {
+    pub fn new(x: i32, y: i32) -> Self {
         Self { x, y }
+    }
+
+    pub fn add_x(self, x: i32) -> Self {
+        Self {
+            x: self.x + x,
+            y: self.y,
+        }
+    }
+
+    pub fn add_y(self, y: i32) -> Self {
+        Self {
+            x: self.x,
+            y: self.y + y,
+        }
     }
 }
 
@@ -59,7 +73,7 @@ impl fmt::Debug for UniqueId {
 impl FromUtf8<'_> for UniqueId {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         Ok(Self(buf.as_ref().try_into().map_err(|_| {
-            ErrorKind::InvalidUniqueId(TruncBuf::truncate(buf))
+            ErrorKind::InvalidUniqueId(TruncBuf::new(buf))
         })?))
     }
 }
@@ -73,6 +87,8 @@ pub fn split_altium_map(buf: &[u8]) -> impl Iterator<Item = (&[u8], &[u8])> {
 }
 
 /// Implement `str::split_once` for any buffer
+///
+/// Split at the first instance of a value
 pub fn split_once<T>(buf: &[T], split: T) -> Option<(&[T], &[T])>
 where
     T: PartialEq<T> + Copy,
@@ -109,6 +125,18 @@ impl Color {
     pub fn white() -> Self {
         Self::from_hex(0xff, 0xff, 0xff)
     }
+
+    pub fn red() -> Self {
+        Self::from_hex(0xff, 0x00, 0x00)
+    }
+
+    pub fn green() -> Self {
+        Self::from_hex(0x00, 0xff, 0x00)
+    }
+
+    pub fn blue() -> Self {
+        Self::from_hex(0x00, 0x00, 0xff)
+    }
 }
 
 impl FromUtf8<'_> for Color {
@@ -122,6 +150,27 @@ impl FromUtf8<'_> for Color {
             g: ((num & GMASK) >> 8).try_into().unwrap(),
             b: ((num & BMASK) >> 16).try_into().unwrap(),
         })
+    }
+}
+
+/// Rotation when only 4 values are allowed
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Rotation {
+    #[default]
+    R0 = 0,
+    R90 = 1,
+    R180 = 2,
+    R270 = 3,
+}
+
+impl Rotation {
+    pub fn as_int(self) -> i16 {
+        match self {
+            Rotation::R0 => 0,
+            Rotation::R90 => 90,
+            Rotation::R180 => 180,
+            Rotation::R270 => 270,
+        }
     }
 }
 
@@ -151,4 +200,22 @@ impl FromUtf8<'_> for ReadOnlyState {
         let num: u8 = buf.parse_as_utf8()?;
         num.try_into()
     }
+}
+
+/// Horizontal alignment
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum PosHoriz {
+    #[default]
+    Left,
+    Center,
+    Right,
+}
+
+/// Vertical alignment
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum PosVert {
+    #[default]
+    Top,
+    Middle,
+    Bottom,
 }

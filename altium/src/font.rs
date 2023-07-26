@@ -2,6 +2,13 @@
 
 use std::ops::Deref;
 
+lazy_static::lazy_static! {
+    pub static ref DEFAULT_FONT: Font = Font {
+        name: "Calibri".into(),
+        size: 8,
+    };
+}
+
 /// A font that is stored in a library
 #[derive(Clone, Debug, Default)]
 pub struct Font {
@@ -21,6 +28,12 @@ impl Font {
     }
 }
 
+impl Default for &Font {
+    fn default() -> Self {
+        &DEFAULT_FONT
+    }
+}
+
 /// A set of fonts
 ///
 // We might want to change this to something like `BTreeMap<u16, Arc<Font>>`.
@@ -29,13 +42,18 @@ impl Font {
 // Or `Arc<RwLock<BTreeMap<u16, Arc<Font>>>>`. Yucky, but editable (edit the
 // font if you're the only user duplicate it if you're not)
 #[derive(Clone, Debug, Default)]
-pub struct FontCollection(pub(crate) Vec<Font>);
+pub struct FontCollection(Vec<Font>);
 
-impl Deref for FontCollection {
-    type Target = [Font];
+impl FontCollection {
+    /// Altium seems to use one indexing
+    pub(crate) fn get_idx(&self, idx: usize) -> &Font {
+        &self.0[idx
+            .checked_sub(1)
+            .expect("guess Altium doesn't use one indexing")]
+    }
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &Font> {
+        self.0.iter()
     }
 }
 

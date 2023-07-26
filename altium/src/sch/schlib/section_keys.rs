@@ -5,7 +5,7 @@ use cfb::CompoundFile;
 
 use super::SchLibMeta;
 use crate::common::split_altium_map;
-use crate::errors::ErrorKind;
+use crate::error::ErrorKind;
 use crate::logging::log_unsupported_key;
 use crate::parse::ParseUtf8;
 use crate::Error;
