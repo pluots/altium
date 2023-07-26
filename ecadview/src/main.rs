@@ -6,6 +6,7 @@
 
 use bevy::input::touchpad::{TouchpadMagnify, TouchpadRotate};
 use bevy::prelude::*;
+use bevy::winit::WinitSettings;
 
 const BACKGROUND_COLOR: Color = Color::rgb(0.2, 0.2, 0.2);
 const FRAMERATE_LIMIT: f64 = 30.0;
@@ -16,6 +17,8 @@ const GRID_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
 
 fn main() {
     App::new()
+        // Power-saving reactive rendering for applications.
+        .insert_resource(WinitSettings::desktop_app())
         .add_plugins((DefaultPlugins, bevy_framepace::FramepacePlugin))
         .insert_resource(CursorPosition::default())
         .insert_resource(ClearColor(BACKGROUND_COLOR))
