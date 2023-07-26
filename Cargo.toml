@@ -12,3 +12,6 @@ default-members = [
     "altium-macros",
     "adedit"
 ]
+
+[profile.dev.package."bevy"]
+opt-level = 3
