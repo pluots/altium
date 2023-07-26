@@ -185,7 +185,7 @@ pub struct MetaData {
     pub(crate) description: Option<Box<str>>,
     /// Alternative display modes
     display_mode_count: u8,
-    index_in_sheet: i8,
+    index_in_sheet: i16,
     library_path: Box<str>,
     #[from_record(rename = b"LibReference")]
     libref: Box<str>,
@@ -214,7 +214,7 @@ pub struct IeeeSymbol {
 pub struct Label {
     color: Color,
     font_id: u16,
-    index_in_sheet: i8,
+    index_in_sheet: i16,
     is_not_accessible: bool,
     location_x: i32,
     location_y: i32,
@@ -237,6 +237,13 @@ pub struct Bezier {
 pub struct PolyLine {
     owner_index: u8,
     owner_part_id: i8,
+    is_not_accessible: bool,
+    line_width: i8,
+    color: Color,
+    location_count: u16,
+    // TODO: how to handle X1 Y1 X2 Y2 headers
+    unique_id: UniqueId,
+    index_in_sheet: i16,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
@@ -273,6 +280,19 @@ pub struct RectangleRounded {
 pub struct ElipticalArc {
     owner_index: u8,
     owner_part_id: i8,
+    is_not_accessible: bool,
+    index_in_sheet: i16,
+    location_x: i32,
+    location_y: i32,
+    radius: i8,
+    radius_frac: i16,
+    secondary_radius: i8,
+    secondary_radius_frac: i16,
+    line_width: i8,
+    start_angle: f32,
+    end_angle: f32,
+    color: Color,
+    unique_id: UniqueId,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
@@ -297,7 +317,7 @@ pub struct Rectangle {
     /// Top right corner
     corner_x: i32,
     corner_y: i32,
-    index_in_sheet: i8,
+    index_in_sheet: i16,
     is_not_accessible: bool,
     is_solid: bool,
     line_width: u16,
@@ -386,7 +406,7 @@ pub struct Image {
     owner_index: u8,
     owner_part_id: i8,
     is_not_accessible: bool,
-    index_in_sheet: i8,
+    index_in_sheet: i16,
     location_x: i32,
     location_y: i32,
     corner_x: i32,
@@ -431,7 +451,7 @@ pub struct Designator {
     font_id: u16,
     unique_id: UniqueId,
     name: Box<str>,
-    index_in_sheet: i8,
+    index_in_sheet: i16,
     text: Box<str>,
     read_only_state: ReadOnlyState,
 }
@@ -457,7 +477,7 @@ pub struct Parameter {
     owner_part_id: i8,
     location_x: i32,
     location_y: i32,
-    index_in_sheet: i8,
+    index_in_sheet: i16,
     color: Color,
     font_id: u16,
     unique_id: UniqueId,

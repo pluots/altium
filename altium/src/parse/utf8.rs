@@ -6,7 +6,10 @@
 
 use std::str;
 
-use crate::{common::buf2lstring, ErrorKind};
+use crate::{
+    common::{buf2lstring, str_from_utf8},
+    ErrorKind,
+};
 
 /// Extension trait for `&[u8]` that will parse a string as utf8/ASCII for
 /// anything implementing `FromUtf8`
@@ -31,19 +34,19 @@ impl<'a> ParseUtf8<'a> for &'a [u8] {
 
 impl<'a> FromUtf8<'a> for &'a str {
     fn from_utf8(buf: &'a [u8]) -> Result<Self, ErrorKind> {
-        Ok(str::from_utf8(buf)?)
+        str_from_utf8(buf)
     }
 }
 
 impl FromUtf8<'_> for String {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        Ok(str::from_utf8(buf)?.to_owned())
+        Ok(str_from_utf8(buf)?.to_owned())
     }
 }
 
 impl FromUtf8<'_> for Box<str> {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        Ok(str::from_utf8(buf)?.into())
+        Ok(str_from_utf8(buf)?.into())
     }
 }
 
@@ -61,49 +64,56 @@ impl FromUtf8<'_> for bool {
 
 impl FromUtf8<'_> for u8 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        let s = str::from_utf8(buf)?;
+        let s = str_from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }
 
 impl FromUtf8<'_> for i8 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        let s = str::from_utf8(buf)?;
+        let s = str_from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }
 
 impl FromUtf8<'_> for u16 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        let s = str::from_utf8(buf)?;
+        let s = str_from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }
 
 impl FromUtf8<'_> for i16 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        let s = str::from_utf8(buf)?;
+        let s = str_from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }
 
 impl FromUtf8<'_> for u32 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        let s = str::from_utf8(buf)?;
+        let s = str_from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }
 
 impl FromUtf8<'_> for i32 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        let s = str::from_utf8(buf)?;
+        let s = str_from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
+    }
+}
+
+impl FromUtf8<'_> for f32 {
+    fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
+        let s = str_from_utf8(buf)?;
+        s.parse().map_err(|e| ErrorKind::ExpectedFloat(s.into(), e))
     }
 }
 
 impl FromUtf8<'_> for usize {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        let s = str::from_utf8(buf)?;
+        let s = str_from_utf8(buf)?;
         s.parse().map_err(|e| ErrorKind::ExpectedInt(s.into(), e))
     }
 }

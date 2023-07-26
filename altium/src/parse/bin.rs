@@ -1,6 +1,11 @@
 use std::str;
 
-use crate::{common::split_once, error::TruncBuf, Error, ErrorKind};
+use crate::{
+    common::{split_once, str_from_utf8},
+    error::TruncBuf,
+    Error,
+    ErrorKind,
+};
 
 #[derive(Clone, Copy, Debug)]
 pub enum BufLenMatch {
@@ -56,6 +61,6 @@ pub fn extract_sized_utf8_buf(
     len_match: BufLenMatch,
 ) -> Result<(&str, &[u8]), ErrorKind> {
     let (str_buf, rest) = extract_sized_buf(buf, len_match)?;
-    let text = str::from_utf8(str_buf)?;
+    let text = str_from_utf8(str_buf)?;
     Ok((text, rest))
 }

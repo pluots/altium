@@ -102,6 +102,12 @@ pub fn buf2lstring(buf: &[u8]) -> String {
     String::from_utf8_lossy(buf).to_string()
 }
 
+/// `str::from_utf8` but with a context error
+pub fn str_from_utf8(buf: &[u8]) -> Result<&str, ErrorKind> {
+    str::from_utf8(buf).map_err(|e| ErrorKind::Utf8(e, String::from_utf8_lossy(buf).to_string()))
+    // str::from_utf8(buf).map_err(|e| ErrorKind::Utf8(e, String::from_utf8_lossy(buf).to_string()))
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Color {
     pub r: u8,
