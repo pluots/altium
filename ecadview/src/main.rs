@@ -158,7 +158,8 @@ pub fn update_cursor_position(
 
         let mut text = text_query.single_mut();
         text.sections[0].value = pos.disp_str();
-        text.sections[2].value = format!("{scale:.2}");
+        // Display 1/scale because 
+        text.sections[2].value = format!("{:.2}", 1.0 / scale);
     }
 }
 
