@@ -256,6 +256,8 @@ impl SchLibMeta {
         let mut stream = cfile.open_stream(Self::STREAMNAME)?;
         stream.read_to_end(tmp_buf)?;
 
+        println!("parsing cfile:\n{}", String::from_utf8_lossy(tmp_buf));
+
         let to_parse = tmp_buf
             .get(Self::PFX_LEN..)
             .ok_or(ErrorKind::new_invalid_stream(Self::STREAMNAME, 0))?
@@ -276,11 +278,24 @@ impl SchLibMeta {
             ));
         }
 
+        let mut skip_keys = Vec::new();
         let mut ret = Self::default();
         let mut fonts = Vec::new();
 
         // Iterate through each key. Based on its type, parse a value.
-        for (key, val) in split_altium_map(to_parse) {
+        for (mut key, val) in split_altium_map(to_parse) {
+            // Altium does something where it will store a UTF8 version of a key
+            // preceded by `%UTF8%` and a non-UTF8 version without it. Maybe for
+            // backward compat? We just take the UTF8 version, since the
+            // non-UTF8 version seems garbage (e.g. contains just 0xb0 for `°`
+            // rather than 0xc2 0xb0. Maybe it's truncated utf16?)
+            if key.starts_with(b"%UTF8%") {
+                key = &key[6..];
+                skip_keys.push(key);
+            } else if skip_keys.contains(&key) {
+                continue;
+            }
+
             match key {
                 Self::HEADER_KEY => continue,
                 b"Weight" => ret.weight = val.parse_as_utf8()?,
@@ -336,7 +351,7 @@ impl SchLibMeta {
         }
 
         ret.fonts = Arc::new(fonts.into());
-
+        println!("done parsing cfile");
         Ok(ret)
     }
 }

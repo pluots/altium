@@ -4,7 +4,7 @@ use std::cmp::min;
 use std::fmt;
 use std::fmt::Write;
 use std::io;
-use std::num::ParseIntError;
+use std::num::{ParseFloatError, ParseIntError};
 use std::str::Utf8Error;
 
 use crate::sch::PinError;
@@ -46,10 +46,17 @@ impl Frame {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}. context:", self.kind)?;
-        for (idx, frame) in self.trace.iter().enumerate() {
-            write!(f, "  {idx:2}: {}", frame.description())?;
+        self.kind.fmt(f)?;
+
+        if !self.trace.is_empty() {
+            f.write_str(". context:")?;
+
+            for (idx, frame) in self.trace.iter().enumerate() {
+                write!(f, "\n  {idx:2}: {}", frame.description())?;
+            }
+            f.write_str("\n")?;
         }
+
         Ok(())
     }
 }
@@ -73,8 +80,9 @@ pub enum ErrorKind {
     FileType(String, &'static str),
     InvalidStream(Box<str>, usize),
     RequiredSplit(String),
-    Utf8(Utf8Error),
+    Utf8(Utf8Error, String),
     ExpectedInt(String, ParseIntError),
+    ExpectedFloat(String, ParseFloatError),
     InvalidKey(Box<str>),
     InvalidHeader(Box<str>),
     ExpectedBool(String),
@@ -95,7 +103,7 @@ impl fmt::Display for ErrorKind {
             ErrorKind::MissingSection(e) => write!(f, "missing required section `{e}`"),
             ErrorKind::MissingUniqueId(e) => write!(f, "bad or missing unique ID section `{e}`"),
             ErrorKind::InvalidUniqueId(e) => {
-                write!(f, "invalid unique ID section `{e}`")
+                write!(f, "invalid unique ID section `{e}` (len {})", e.orig_len)
             }
             ErrorKind::FileType(n, ty) => write!(f, "file `{n}` is not a valid {ty} file"),
             ErrorKind::InvalidStream(s, n) => {
@@ -107,9 +115,10 @@ impl fmt::Display for ErrorKind {
             ErrorKind::InvalidStorageData(e) => {
                 write!(f, "invalid storage data near `{e:x}`")
             }
-            ErrorKind::Utf8(e) => write!(f, "utf8 error: {e}"),
+            ErrorKind::Utf8(e, s) => write!(f, "utf8 error: {e} at '{s}'"),
             ErrorKind::InvalidHeader(e) => write!(f, "invalid header '{e}'"),
             ErrorKind::ExpectedInt(s, e) => write!(f, "error parsing integer from `{s}`: {e}"),
+            ErrorKind::ExpectedFloat(s, e) => write!(f, "error parsing float from `{s}`: {e}"),
             ErrorKind::InvalidKey(s) => write!(f, "invalid key found: `{s}`"),
             ErrorKind::ExpectedBool(s) => write!(f, "error parsing bool from `{s}`"),
             ErrorKind::ExpectedColor(v) => write!(f, "error parsing color from `{v:x}`"),
@@ -188,12 +197,6 @@ impl From<io::Error> for Error {
             kind: Box::new(value.into()),
             trace: Vec::new(),
         }
-    }
-}
-
-impl From<Utf8Error> for ErrorKind {
-    fn from(value: Utf8Error) -> Self {
-        Self::Utf8(value)
     }
 }
 

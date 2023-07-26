@@ -128,7 +128,7 @@ fn parse_all_records(buf: &[u8], name: &str) -> Result<Vec<SchRecord>, Error> {
             _ => panic!("unexpected record type {ty:02x}"),
         };
 
-        parsed.push(record.context(format!("parse_all_records for {name}"))?);
+        parsed.push(record.context(format!("in `parse_all_records` for `{name}`"))?);
     }
 
     Ok(parsed)

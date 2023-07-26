@@ -83,7 +83,13 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
             #match_pat => {
                 let parsed = val.parse_as_utf8()
                     // Add context of what we were trying to parse
-                    .context(concat!("while parsing `", #match_lit, "`"))?;
+                    .context(concat!(
+                        "while matching `",
+                        #match_lit,
+                        "` for `",
+                        stringify!(#name),
+                        "` (via proc macro)"
+                    ))?;
                 #ret_stmt
             },
         };

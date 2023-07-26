@@ -84,8 +84,8 @@ impl SvgCtx {
                 "{} {} {} {}",
                 min_x - side_extra,
                 min_y - vert_extra,
-                max_x + side_extra,
-                max_y + vert_extra,
+                (max_x - min_x) + side_extra * 2,
+                (max_y - min_y) + vert_extra * 2,
             ),
         );
 
