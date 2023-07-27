@@ -13,5 +13,8 @@ default-members = [
     "adedit"
 ]
 
-[profile.dev.package."bevy"]
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
 opt-level = 3

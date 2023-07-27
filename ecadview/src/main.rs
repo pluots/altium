@@ -4,9 +4,12 @@
 // mod resources;
 // mod setup;
 
+use bevy::input::mouse::{MouseWheel, MouseMotion};
 use bevy::input::touchpad::{TouchpadMagnify, TouchpadRotate};
 use bevy::prelude::*;
 use bevy::winit::WinitSettings;
+use bevy::sprite::MaterialMesh2dBundle;
+
 
 const BACKGROUND_COLOR: Color = Color::rgb(0.2, 0.2, 0.2);
 const FRAMERATE_LIMIT: f64 = 30.0;
@@ -38,7 +41,7 @@ fn main() {
         //         play_collision_sound.after(check_for_collisions),
         //     ),
         // )
-        .add_systems(Update, (update_cursor_position, touchpad_gestures))
+        .add_systems(Update, (update_cursor_position, touchpad_gestures, pan_zoom_camera))
         .run();
 
     // .add_systems(Startup, add_people)
@@ -46,8 +49,6 @@ fn main() {
     // .run();
 }
 
-use bevy::prelude::*;
-use bevy::sprite::MaterialMesh2dBundle;
 
 // Add the game's entities to our world
 pub fn setup(
@@ -61,7 +62,7 @@ pub fn setup(
     fs_settings.limiter = bevy_framepace::Limiter::from_framerate(FRAMERATE_LIMIT);
 
     // Camera
-    commands.spawn((Camera2dBundle::default(), MainCamera));
+    commands.spawn((Camera2dBundle::default(), PanZoomCamera::default()));
 
     windows.iter_mut().next().unwrap().cursor.icon = CursorIcon::Crosshair;
     // Cursor position
@@ -132,7 +133,15 @@ pub fn setup(
 }
 
 #[derive(Component)]
-pub struct MainCamera;
+pub struct PanZoomCamera {
+
+}
+
+impl Default for PanZoomCamera {
+    fn default() -> Self {
+        Self {  }
+    }
+}
 
 /// Location within the grid
 #[derive(Resource, Default)]
@@ -148,7 +157,7 @@ pub fn update_cursor_position(
     mut pos: ResMut<CursorPosition>,
     mut text_query: Query<&mut Text>,
     window_query: Query<&Window>,
-    projection_query: Query<&mut OrthographicProjection, With<MainCamera>>,
+    projection_query: Query<&mut OrthographicProjection, With<PanZoomCamera>>,
 ) {
     let window = window_query.single();
 
@@ -166,7 +175,7 @@ pub fn update_cursor_position(
 // these only work on macOS
 fn touchpad_gestures(
     mut evr_touchpad_magnify: EventReader<TouchpadMagnify>,
-    mut q: Query<&mut OrthographicProjection, With<MainCamera>>, // mut evr_touchpad_rotate: EventReader<TouchpadRotate>,
+    mut q: Query<&mut OrthographicProjection, With<PanZoomCamera>>, // mut evr_touchpad_rotate: EventReader<TouchpadRotate>,
 ) {
     let mut projection = q.single_mut();
     for ev_magnify in evr_touchpad_magnify.iter() {
@@ -174,6 +183,77 @@ fn touchpad_gestures(
         // small abs.
         projection.scale *= (1.0 + ev_magnify.0);
     }
+}
+
+/// Based on https://bevy-cheatbook.github.io/cookbook/pan-orbit-camera.html
+fn pan_zoom_camera(
+    mut ev_motion: EventReader<MouseMotion>,
+    mut ev_scroll: EventReader<MouseWheel>,
+    input_mouse: Res<Input<MouseButton>>,
+    mut query: Query<(&mut PanZoomCamera, &mut Transform, &Projection)>,
+    window_query: Query<&Window>,
+) {
+    // let orbit_button = MouseButton::Right;
+    let pan_button = MouseButton::Middle;
+
+    let mut pan = Vec2::ZERO;
+    let mut rotation_move = Vec2::ZERO;
+    let mut scroll = 0.0;
+    // let mut orbit_button_changed = false;
+
+    
+    if input_mouse.pressed(pan_button) {
+        for ev in ev_motion.iter() {
+            pan += ev.delta;
+        }
+        dbg!(pan);
+    }
+
+    for ev in ev_scroll.iter() {
+        scroll += ev.y;
+        dbg!(scroll);
+    }
+    // dbg!(pan, scroll);
+
+    for (mut pan_orbit, mut transform, projection) in query.iter_mut() {
+        let mut any = false;
+        if pan.length_squared() > 0.0 {
+            // any = true;
+            // // make panning distance independent of resolution and FOV,
+            // let window = get_primary_window_size(&window_query);
+            // if let Projection::Perspective(projection) = projection {
+            //     pan *= Vec2::new(projection.fov * projection.aspect_ratio, projection.fov) / window;
+            // }
+            // // translate by local axes
+            // let right = transform.rotation * Vec3::X * -pan.x;
+            // let up = transform.rotation * Vec3::Y * pan.y;
+            // // make panning proportional to distance away from focus point
+            // let translation = (right + up) * pan_orbit.radius;
+            // pan_orbit.focus += translation;
+        } else if scroll.abs() > 0.0 {
+            // any = true;
+            // pan_orbit.radius -= scroll * pan_orbit.radius * 0.2;
+            // // dont allow zoom to reach zero or you get stuck
+            // pan_orbit.radius = f32::max(pan_orbit.radius, 0.05);
+        }
+
+        if any {
+            // // emulating parent/child to make the yaw/y-axis rotation behave like a turntable
+            // // parent = x and y rotation
+            // // child = z-offset
+            // let rot_matrix = Mat3::from_quat(transform.rotation);
+            // transform.translation = pan_orbit.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, pan_orbit.radius));
+        }
+    }
+
+    // consume any remaining events, so they don't pile up if we don't need them
+    // (and also to avoid Bevy warning us about not checking events every frame update)
+    ev_motion.clear();
+}
+
+fn get_primary_window_size(window_query: &Query<&Window>) -> Vec2 {
+    let window = window_query.single();
+    Vec2::new(window.width(), window.height() )
 }
 
 // // These constants are defined in `Transform` units.
