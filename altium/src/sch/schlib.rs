@@ -11,7 +11,7 @@ use cfb::CompoundFile;
 use section_keys::update_section_keys;
 
 use crate::common::{buf2lstring, split_altium_map, Color, UniqueId};
-use crate::error::ErrorKind;
+use crate::error::{AddContext, ErrorKind};
 use crate::font::{Font, FontCollection};
 use crate::parse::ParseUtf8;
 use crate::sch::{storage::Storage, Component, SheetStyle};
@@ -34,8 +34,8 @@ pub struct SchLib<F> {
 impl SchLib<File> {
     /// Open a file from disk
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        let cfile = cfb::open(path)?;
-        Self::from_cfile(cfile)
+        let cfile = cfb::open(&path)?;
+        Self::from_cfile(cfile).or_context(|| format!("opening {}", path.as_ref().display()))
     }
 }
 

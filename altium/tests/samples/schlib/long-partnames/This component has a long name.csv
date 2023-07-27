@@ -1,0 +1,3 @@
+ Object Kind,X1,Y1,Orientation,Owner,Color,Font,Horizontal Justification,Vertical Justification,Autoposition
+Designator,-50mil,50mil,0 Degrees,This designator is pretty long,8388608,"Calibri, 8",Left,Bottom,True
+Parameter,-50mil,-150mil,0 Degrees,This designator is pretty long,8388608,"Calibri, 8",Left,Bottom,True

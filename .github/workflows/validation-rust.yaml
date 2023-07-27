@@ -73,7 +73,7 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: dtolnay/rust-toolchain@1.65.0
-      - run: cargo test
+      - run: cargo test -- --nocapture
 
   fmt:
     name: "Format (cargo fmt)"
