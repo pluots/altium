@@ -416,6 +416,7 @@ pub struct Image {
     file_name: Box<str>,
     unique_id: UniqueId,
     corner_x_frac: i32,
+    corner_y_frac: i32,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]

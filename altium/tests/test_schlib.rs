@@ -8,12 +8,12 @@ use std::{
 
 use altium::sch::{storage::file_name, SchLib};
 
-const SCHLIB_EMPTY: &str = "tests/samples/schlib/Empty.SchLib";
-const SCHLIB_GRAPHIC: &str = "tests/samples/schlib/Graphic.SchLib";
-const SCHLIB_GRAPHIC_SIMPLE: &str = "tests/samples/schlib/GraphicSimple.SchLib";
-const SCHLIB_LONG_PART_NAMES: &str = "tests/samples/schlib/LongPartNames.SchLib";
-const SCHLIB_LONG_PIN_DATA: &str = "tests/samples/schlib/LongPinData.SchLib";
-const SCHLIB_SIMPLE: &str = "tests/samples/schlib/Simple.SchLib";
+const SCHLIB_EMPTY: &str = "tests/samples/schlib/empty.SchLib";
+const SCHLIB_GRAPHIC: &str = "tests/samples/schlib/graphic-mixed.SchLib";
+const SCHLIB_GRAPHIC_SIMPLE: &str = "tests/samples/schlib/graphic-simple.SchLib";
+const SCHLIB_LONG_PART_NAMES: &str = "tests/samples/schlib/long-partnames.SchLib";
+const SCHLIB_LONG_PIN_DATA: &str = "tests/samples/schlib/long-pindata.SchLib";
+const SCHLIB_SIMPLE: &str = "tests/samples/schlib/simple.SchLib";
 
 const ALL_SCHLIBS: &[&str] = &[
     SCHLIB_EMPTY,
@@ -26,10 +26,13 @@ const ALL_SCHLIBS: &[&str] = &[
 
 /// Name of a component in simple
 const SIMPLE_COMP_NAME1: &str = "Mixed with shape and text";
-const SIMPLE_COMP_NAME2: &str = "Pin_Properties";
+const SIMPLE_COMP_NAME2: &str = "PinProperties";
 
 #[test]
 fn test_parse() {
+    let wd = std::env::current_dir().unwrap();
+    println!("working directory: {}", wd.display());
+
     // Just test error free parsing
     let schlib = SchLib::open(SCHLIB_EMPTY).unwrap();
     println!("{schlib:#?}");

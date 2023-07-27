@@ -1,0 +1,18 @@
+ Object Kind,String Type,Layer,Component,X1 (mm),Y1 (mm),Locked,Hide,Rotation,String,Text Height (mm),Text Width (mm),Stroke Font,Autoposition,Mirror,TrueType Font Name,Bold,Italic,Inverted,Inverted Border Width (mm),Bounding Rectangle Width (mm),Bounding Rectangle Height (mm),Text Justification,Inverted Text Offset (mm),Text Kind,BarCode Full Width (mm),BarCode Full Height (mm),BarCode X Margin (mm),BarCode Y Margin (mm),BarCode Min Width (mm),BarCode Type,BarCode Render Mode,BarCode Inverted,BarCode Text Font Name,BarCode Show Text,Border Space Type
+Text,Free,TopOverlay,Free,0,0,False,False,0.000,Top Overlay,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,Mechanical 1,Free,0,0,False,False,0.000,M1,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,Top Layer,Free,0,0,False,False,0.000,Top,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,Top Layer,Free,0,9,False,False,0.000,Top
+All strings 20mm x 2mm box
+2mm text height
+Font Calibri bold
+"(0,0) center",2,0.254,Default,,False,Calibri,True,False,False,0,20,7.5237,Left-Below,0,TrueType Font,20,7.5237,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,Bottom Courtyard,Free,0,0,False,False,0.000,Bot Courtyard,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,Bottom Layer,Free,0,0,False,False,0.000,Bot,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,Mechanical 13,Free,0,0,False,False,0.000,M13,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,Top Courtyard,Free,0,0,False,False,0.000,Top courtyard M15,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,BottomOverlay,Free,0,0,False,False,0.000,Bot Overlay,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,TopPaste,Free,0,0,False,False,0.000,Top Paste,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,BottomPaste,Free,0,0,False,False,0.000,Bot Paste,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,TopSolder,Free,0,0,False,False,0.000,Top Solder,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
+Text,Free,BottomSolder,Free,0,0,False,False,0.000,Bot Solder,2,0.254,Default,,False,Calibri,True,False,False,0,20,2,Left-Below,0,TrueType Font,20,2,0.508,0.508,0,Code 39,By BarCode Full Width,True,Arial,True,Border Margin
