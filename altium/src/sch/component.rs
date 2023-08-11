@@ -59,7 +59,11 @@ impl Component {
     /// Draw this component to a SVG and write it to a file. Will create the file
     /// if it does not exist.
     pub fn save_svg<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
-        let file = OpenOptions::new().write(true).create(true).open(path)?;
+        let file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(path)?;
         svg::write(&file, &self.svg())
     }
 
