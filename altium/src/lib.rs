@@ -51,6 +51,13 @@ pub use prj::PrjPcb;
 #[doc(inline)]
 pub use sch::{SchDoc, SchLib};
 
+/// Allow using the sealed trait if this feature is enabled. Used for the GUI crate
+#[cfg(not(feature = "_sealed"))]
 mod sealed {
+    pub trait Sealed {}
+}
+
+#[cfg(feature = "_sealed")]
+pub mod sealed {
     pub trait Sealed {}
 }
