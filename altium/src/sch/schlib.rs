@@ -219,32 +219,32 @@ pub(crate) struct SchLibMeta {
 
 /// Parse implementation
 impl SchLibMeta {
-    const STREAMNAME: &str = "FileHeader";
+    const STREAMNAME: &'static str = "FileHeader";
 
     /// Magic header found in all streams
-    const HEADER: &[u8] =
+    const HEADER: &'static [u8] =
         b"HEADER=Protel for Windows - Schematic Library Editor Binary File Version 5.0";
-    const HEADER_KEY: &[u8] = b"HEADER";
+    const HEADER_KEY: &'static [u8] = b"HEADER";
 
     // /// Every header starts with this
     // const PFX: &[u8] = &[0x7a, 0x04, 0x00, 0x00, b'|'];
     // Seems like each stream starts with 4 random bytes followed by a `|`?
     const PFX_LEN: usize = 5;
-    const SFX: &[u8] = &[0x00];
+    const SFX: &'static [u8] = &[0x00];
 
     /* font-related items */
     /// `FontName1=Times New Roman`
-    const FONT_NAME_PFX: &[u8] = b"FontName";
+    const FONT_NAME_PFX: &'static [u8] = b"FontName";
     /// `Size1=9`
-    const FONT_SIZE_PFX: &[u8] = b"Size";
+    const FONT_SIZE_PFX: &'static [u8] = b"Size";
 
     /* part-related items */
     /// `Libref0=Part Name`
-    const COMP_LIBREF_PFX: &[u8] = b"LibRef";
+    const COMP_LIBREF_PFX: &'static [u8] = b"LibRef";
     /// `CompDescr0=Long description of thing Name`
-    const COMP_DESC_PFX: &[u8] = b"CompDescr";
+    const COMP_DESC_PFX: &'static [u8] = b"CompDescr";
     /// `PartCount0=2` number of subcomponents (seems to default to 2?)
-    const COMP_PARTCOUNT_PFX: &[u8] = b"PartCount";
+    const COMP_PARTCOUNT_PFX: &'static [u8] = b"PartCount";
 
     /// Validate a `FileHeader` and extract its information
     ///
