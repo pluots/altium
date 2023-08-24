@@ -94,10 +94,10 @@ impl<F: Read + Seek> SchLib<F> {
             // Scope of refcell borrow
             let mut cfile_ref = self.cfile.borrow_mut();
             let mut stream = cfile_ref.open_stream(&data_path).unwrap_or_else(|e| {
-                panic!(
-                    "missing required stream `{}` with error {e}",
-                    data_path.display()
-                )
+                dbg!(&meta);
+                dbg!(&data_path);
+                let path_disp = data_path.display();
+                panic!("missing required stream `{path_disp}` with error {e}")
             });
             stream.read_to_end(&mut buf).unwrap();
         }
@@ -256,8 +256,6 @@ impl SchLibMeta {
         let mut stream = cfile.open_stream(Self::STREAMNAME)?;
         stream.read_to_end(tmp_buf)?;
 
-        println!("parsing cfile:\n{}", String::from_utf8_lossy(tmp_buf));
-
         let to_parse = tmp_buf
             .get(Self::PFX_LEN..)
             .ok_or(ErrorKind::new_invalid_stream(Self::STREAMNAME, 0))?
@@ -351,12 +349,9 @@ impl SchLibMeta {
         }
 
         ret.fonts = Arc::new(fonts.into());
-        println!("done parsing cfile");
         Ok(ret)
     }
 }
-
-// pub struct Components {}
 
 /// Information available in the header about a single component: includes
 /// libref and part count

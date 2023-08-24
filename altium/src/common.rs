@@ -1,5 +1,7 @@
 use std::{fmt, str};
 
+use uuid::Uuid;
+
 use crate::error::{ErrorKind, TruncBuf};
 use crate::parse::{FromUtf8, ParseUtf8};
 
@@ -15,10 +17,12 @@ pub struct Location {
 }
 
 impl Location {
+    #[must_use]
     pub fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
 
+    #[must_use]
     pub fn add_x(self, x: i32) -> Self {
         Self {
             x: self.x + x,
@@ -26,6 +30,7 @@ impl Location {
         }
     }
 
+    #[must_use]
     pub fn add_y(self, y: i32) -> Self {
         Self {
             x: self.x,
@@ -45,36 +50,53 @@ pub enum Visibility {
 ///
 // TODO: figure out what file types use this exact format
 #[derive(Clone, Copy, PartialEq)]
-pub struct UniqueId([u8; 8]);
+pub enum UniqueId {
+    /// Altium's old style UUID
+    Simple([u8; 8]),
+    Uuid(Uuid),
+}
 
 impl UniqueId {
-    pub(crate) fn from_slice<S: AsRef<[u8]>>(buf: S) -> Option<Self> {
-        buf.as_ref().try_into().ok().map(Self)
+    fn from_slice<S: AsRef<[u8]>>(buf: S) -> Option<Self> {
+        buf.as_ref()
+            .try_into()
+            .ok()
+            .map(Self::Simple)
+            .or_else(|| Uuid::try_parse_ascii(buf.as_ref()).ok().map(Self::Uuid))
     }
+}
 
-    /// Get this `UniqueId` as a string
-    pub fn as_str(&self) -> &str {
-        str::from_utf8(&self.0).expect("unique IDs should always be ASCII")
+impl fmt::Display for UniqueId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UniqueId::Simple(v) => str::from_utf8(v)
+                .expect("unique IDs should always be ASCII")
+                .fmt(f),
+            UniqueId::Uuid(v) => v.as_hyphenated().fmt(f),
+        }
     }
 }
 
 impl Default for UniqueId {
     fn default() -> Self {
-        Self(*b"00000000")
+        Self::Simple(*b"00000000")
     }
 }
 
 impl fmt::Debug for UniqueId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("UniqueId").field(&self.as_str()).finish()
+        f.debug_tuple("UniqueId").field(&self.to_string()).finish()
     }
 }
 
 impl FromUtf8<'_> for UniqueId {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        Ok(Self(buf.as_ref().try_into().map_err(|_| {
-            ErrorKind::InvalidUniqueId(TruncBuf::new(buf))
-        })?))
+        buf.as_ref()
+            .try_into()
+            .ok()
+            .map(Self::Simple)
+            .or_else(|| Uuid::try_parse_ascii(buf).ok().map(Self::Uuid))
+            .ok_or(ErrorKind::InvalidUniqueId(TruncBuf::new(buf)))
     }
 }
 
@@ -224,4 +246,18 @@ pub enum PosVert {
     Top,
     Middle,
     Bottom,
+}
+
+/// Verify a number pattern matches, e.g. `X100`
+pub fn is_number_pattern(s: &[u8], prefix: u8) -> bool {
+    if let Some(stripped) = s
+        .strip_prefix(&[prefix])
+        .map(|s| s.strip_prefix(&[b'-']).unwrap_or(s))
+    {
+        if stripped.iter().all(u8::is_ascii_digit) {
+            return true;
+        }
+    }
+
+    false
 }

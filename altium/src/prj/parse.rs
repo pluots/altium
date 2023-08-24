@@ -2,7 +2,12 @@ use std::borrow::ToOwned;
 
 use ini::Properties;
 
-use crate::{common::UniqueId, error::ErrorKind};
+use crate::{
+    common::UniqueId,
+    error::{AddContext, ErrorKind},
+    parse::FromUtf8,
+    Error,
+};
 
 /// Parse a string or default to an empty string
 pub fn parse_string(sec: &Properties, key: &str) -> String {
@@ -22,8 +27,9 @@ pub fn parse_bool(sec: &Properties, key: &str) -> bool {
 }
 
 /// Extract a `UniqueId` from a buffer
-pub fn parse_unique_id(sec: &Properties, key: &str) -> Result<UniqueId, ErrorKind> {
+pub fn parse_unique_id(sec: &Properties, key: &str) -> Result<UniqueId, Error> {
     sec.get(key)
         .ok_or_else(|| ErrorKind::MissingSection(key.to_owned()))
-        .map(|v| UniqueId::from_slice(v).ok_or(ErrorKind::MissingUniqueId(v.to_owned())))?
+        .and_then(|v| UniqueId::from_utf8(v.as_bytes()))
+        .map_err(|e| e.context("parse_unique_id"))
 }

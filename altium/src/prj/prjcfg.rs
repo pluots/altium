@@ -177,7 +177,7 @@ impl Document {
     }
 
     /// Create a vector of `Document`s from an ini file
-    fn from_prj_ini(ini: &Ini) -> Result<Vec<Self>, ErrorKind> {
+    fn from_prj_ini(ini: &Ini) -> Result<Vec<Self>, Error> {
         let mut doc_sections: Vec<&str> = ini
             .sections()
             .filter_map(|nameopt| {
@@ -207,7 +207,7 @@ impl Document {
     }
 
     /// Create a single `Document` from an ini section
-    fn from_section(sec: &Properties) -> Result<Self, ErrorKind> {
+    fn from_section(sec: &Properties) -> Result<Self, Error> {
         Ok(Self {
             document_path: parse_string(sec, "DocumentPath"),
             annotation_en: parse_bool(sec, "AnnotationEnabled"),

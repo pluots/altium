@@ -1,6 +1,7 @@
 //! Things related to the entire component
 
 use core::fmt::Write;
+use std::cmp::Ordering;
 use std::fs::File;
 use std::io;
 use std::path::Path;
@@ -10,7 +11,7 @@ use svg::node::element::SVG as Svg;
 
 use super::storage::Storage;
 use super::{SchDrawCtx, SchRecord};
-use crate::draw::{Draw, SvgCtx};
+use crate::draw::{Canvas, Draw, SvgCtx};
 use crate::error::AddContext;
 use crate::font::FontCollection;
 use crate::sch::pin::SchPin;
@@ -53,7 +54,7 @@ impl Component {
         };
 
         for record in &self.records {
-            record.draw_svg(&mut draw, &ctx);
+            record.draw(&mut draw, &ctx);
         }
         draw.svg()
     }
@@ -62,6 +63,14 @@ impl Component {
     pub fn save_svg<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let file = File::open(path)?;
         svg::write(&file, &self.svg())
+    }
+
+    pub fn draw<C: Canvas>(&self, canvas: &mut C) {
+        let ctx = SchDrawCtx {
+            fonts: &self.fonts,
+            storage: &self.storage,
+        };
+        self.records.iter().for_each(|r| r.draw(canvas, &ctx));
     }
 
     /// The name of this part
@@ -83,6 +92,11 @@ impl Component {
             })
             .expect("no metadata record");
         meta.description.as_deref().unwrap_or("")
+    }
+
+    /// Compare
+    pub fn name_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.name.partial_cmp(&other.name)
     }
 }
 
