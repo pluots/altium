@@ -48,7 +48,7 @@ pub enum CompressedData {
 }
 
 impl Storage {
-    const STREAMNAME: &str = "Storage";
+    const STREAMNAME: &'static str = "Storage";
 
     /// Get the data from a key (path) name if available
     ///

@@ -60,7 +60,7 @@ use num_enum::TryFromPrimitive;
 
 use super::params::Justification;
 use super::pin::SchPin;
-use crate::common::{ReadOnlyState, UniqueId};
+use crate::common::{Location, ReadOnlyState, UniqueId};
 use crate::error::AddContext;
 use crate::Error;
 use crate::{
@@ -181,6 +181,7 @@ pub struct MetaData {
     area_color: Color,
     color: Color,
     current_part_id: u8,
+    database_table_name: Box<str>,
     #[from_record(rename = b"ComponentDescription")]
     pub(crate) description: Option<Box<str>>,
     /// Alternative display modes
@@ -193,7 +194,9 @@ pub struct MetaData {
     /// Number of parts
     part_count: u8,
     part_id_locked: bool,
+    not_use_db_table_name: bool,
     sheet_part_file_name: Box<str>,
+    design_item_id: Box<str>,
     source_library_name: Box<str>,
     target_file_name: Box<str>,
     unique_id: UniqueId,
@@ -216,6 +219,7 @@ pub struct Label {
     font_id: u16,
     index_in_sheet: i16,
     is_not_accessible: bool,
+    is_mirrored: bool,
     location_x: i32,
     location_y: i32,
     owner_index: u8,
@@ -228,8 +232,16 @@ pub struct Label {
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 5)]
 pub struct Bezier {
+    color: Color,
+    index_in_sheet: i16,
+    is_not_accessible: bool,
+    line_width: u16,
+    #[from_record(array = true, count = b"LocationCount")]
+    locations: Vec<Location>,
     owner_index: u8,
     owner_part_id: i8,
+    owner_part_display_mode: i8,
+    unique_id: UniqueId,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
@@ -238,26 +250,48 @@ pub struct PolyLine {
     owner_index: u8,
     owner_part_id: i8,
     is_not_accessible: bool,
-    line_width: i8,
-    color: Color,
-    location_count: u16,
-    // TODO: how to handle X1 Y1 X2 Y2 headers
-    unique_id: UniqueId,
     index_in_sheet: i16,
+    line_width: u16,
+    color: Color,
+    #[from_record(array = true, count = b"LocationCount")]
+    locations: Vec<Location>,
+    unique_id: UniqueId,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 7)]
 pub struct Polygon {
+    area_color: Color,
+    color: Color,
+    index_in_sheet: i16,
+    is_not_accessible: bool,
+    is_solid: bool,
+    line_width: u16,
+    #[from_record(array = true, count = b"LocationCount")]
+    locations: Vec<Location>,
     owner_index: u8,
     owner_part_id: i8,
+    owner_part_display_mode: i8,
+    unique_id: UniqueId,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 8)]
 pub struct Ellipse {
+    area_color: Color,
+    color: Color,
+    index_in_sheet: i16,
+    is_not_accessible: bool,
+    is_solid: bool,
+    line_width: u16,
+    location_x: i32,
+    location_y: i32,
     owner_index: u8,
     owner_part_id: i8,
+    owner_part_display_mode: i8,
+    radius: i32,
+    secondary_radius: i32,
+    unique_id: UniqueId,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
@@ -270,9 +304,23 @@ pub struct Piechart {
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 10)]
 pub struct RectangleRounded {
+    area_color: Color,
+    color: Color,
+    corner_x: i32,
+    corner_y: i32,
+    corner_x_radius: i32,
+    corner_y_radius: i32,
+    index_in_sheet: i16,
+    is_not_accessible: bool,
+    is_solid: bool,
+    line_width: u16,
+    location_x: i32,
+    location_y: i32,
     owner_index: u8,
     owner_part_id: i8,
     owner_part_display_mode: i8,
+    transparent: bool,
+    unique_id: UniqueId,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
@@ -283,11 +331,13 @@ pub struct ElipticalArc {
     is_not_accessible: bool,
     index_in_sheet: i16,
     location_x: i32,
+    location_x_frac: i32,
     location_y: i32,
+    location_y_frac: i32,
     radius: i8,
-    radius_frac: i16,
+    radius_frac: i32,
     secondary_radius: i8,
-    secondary_radius_frac: i16,
+    secondary_radius_frac: i32,
     line_width: i8,
     start_angle: f32,
     end_angle: f32,
@@ -300,13 +350,38 @@ pub struct ElipticalArc {
 pub struct Arc {
     owner_index: u8,
     owner_part_id: i8,
+    is_not_accessible: bool,
+    index_in_sheet: i16,
+    location_x: i32,
+    location_y: i32,
+    radius: i8,
+    radius_frac: i32,
+    secondary_radius: i8,
+    secondary_radius_frac: i32,
+    line_width: i8,
+    start_angle: f32,
+    end_angle: f32,
+    color: Color,
+    unique_id: UniqueId,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 13)]
 pub struct Line {
+    color: Color,
+    corner_x: i32,
+    corner_y: i32,
+    index_in_sheet: i16,
+    is_not_accessible: bool,
+    is_solid: bool,
+    line_width: u16,
+    location_count: u16,
+    location_x: i32,
+    location_y: i32,
     owner_index: u8,
     owner_part_id: i8,
+    owner_part_display_mode: i8,
+    unique_id: UniqueId,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
@@ -327,6 +402,7 @@ pub struct Rectangle {
     owner_index: u8,
     owner_part_id: i8,
     owner_part_display_mode: i8,
+    transparent: bool,
     unique_id: UniqueId,
 }
 
@@ -482,6 +558,7 @@ pub struct Parameter {
     color: Color,
     font_id: u16,
     unique_id: UniqueId,
+    read_only_state: i8,
     name: Box<str>,
     is_hidden: bool,
     text: Box<str>,

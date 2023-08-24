@@ -11,14 +11,15 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::struct_excessive_bools)]
 #![allow(clippy::missing_panics_doc)]
+#![allow(clippy::new_without_default)]
 
 mod common;
-mod draw;
 mod logging;
 mod parse;
 
 #[doc(hidden)]
 pub mod __private;
+pub mod draw;
 pub mod dwf;
 pub mod error;
 pub mod font;

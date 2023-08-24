@@ -3,6 +3,8 @@
 use core::fmt;
 use std::str::{self, Utf8Error};
 
+use log::warn;
+
 use super::SchRecord;
 use crate::common::{Location, Rotation, Visibility};
 
@@ -55,10 +57,9 @@ impl SchPin {
         let (name, rest) = sized_buf_to_utf8(rest, "name")?;
         let (designator, rest) = sized_buf_to_utf8(rest, "designator")?;
 
-        assert!(
-            matches!(rest, [_, 0x03, b'|', b'&', b'|']),
-            "unexpected rest: {rest:02x?}"
-        );
+        if !matches!(rest, [_, 0x03, b'|', b'&', b'|']) {
+            warn!("unexpected rest: {rest:02x?}");
+        }
 
         let retval = Self {
             owner_index: 0,
@@ -91,16 +92,15 @@ impl SchPin {
     /// Altium stores the position of the pin at its non-connecting end. Which
     /// seems dumb. This provides the connecting end.
     pub(crate) fn location_conn(&self) -> Location {
-        let (x_orig, y_orig, len) = (
-            self.location_x,
-            self.location_y,
-            i32::try_from(self.length).unwrap(),
-        );
+        let x_orig = self.location_x;
+        let y_orig = self.location_y;
+        let len = i32::try_from(self.length).unwrap();
+
         let (x, y) = match self.rotation {
             Rotation::R0 => (x_orig + len, y_orig),
-            Rotation::R90 => (x_orig, y_orig - len),
+            Rotation::R90 => (x_orig, y_orig + len),
             Rotation::R180 => (x_orig - len, y_orig),
-            Rotation::R270 => (x_orig, y_orig + len),
+            Rotation::R270 => (x_orig, y_orig - len),
         };
         Location { x, y }
     }
