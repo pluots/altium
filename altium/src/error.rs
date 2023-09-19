@@ -10,6 +10,7 @@ use std::str::Utf8Error;
 
 use crate::sch::PinError;
 
+/// The main result type used by this crate
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 /// Our main error type is an error ([`ErrorKind`]) plus some context for what
@@ -70,7 +71,7 @@ impl fmt::Debug for Error {
     }
 }
 
-/// A raw error caused somewhere along the file
+/// A raw error without context
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ErrorKind {
@@ -300,6 +301,7 @@ impl<T> AddContext for Result<T, ErrorKind> {
 }
 
 /// A subslice of a buffer for nicer error messages
+#[doc(hidden)]
 #[derive(Clone, Debug)]
 pub struct TruncBuf<T> {
     buf: Box<[T]>,

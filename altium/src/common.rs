@@ -70,13 +70,15 @@ impl FromUtf8<'_> for Visibility {
     }
 }
 
-/// A unique ID
+/// An Altium unique ID.
 ///
+/// Every entity in Altium has a unique ID including files, library items, and records.
 // TODO: figure out what file types use this exact format
 #[derive(Clone, Copy, PartialEq)]
 pub enum UniqueId {
     /// Altium's old style UUID
     Simple([u8; 8]),
+    /// UUID style, used by some newer files
     Uuid(Uuid),
 }
 

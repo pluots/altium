@@ -30,6 +30,7 @@ mod parse;
 
 #[doc(hidden)]
 pub mod __private;
+#[doc(hidden)] // docs are unfinished
 pub mod draw;
 pub mod dwf;
 pub mod error;

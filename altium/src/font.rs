@@ -3,7 +3,7 @@
 use std::ops::{Deref, DerefMut};
 
 lazy_static::lazy_static! {
-    pub static ref DEFAULT_FONT: Font = Font {
+    pub(crate) static ref DEFAULT_FONT: Font = Font {
         name: "Calibri".into(),
         size: 8,
     };
