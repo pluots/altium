@@ -118,8 +118,7 @@ impl FromUtf8<'_> for UniqueId {
 /// Altium uses the format `Key1=Val1|Key2=Val2...`, this handles that
 pub fn split_altium_map(buf: &[u8]) -> impl Iterator<Item = (&[u8], &[u8])> {
     buf.split(|b| *b == SEP).filter(|x| !x.is_empty()).map(|x| {
-        split_once(x, KV_SEP)
-            .unwrap_or_else(|| panic!("couldn't find `=` in `{}`", buf2lstring(buf)))
+        split_once(x, KV_SEP).unwrap_or_else(|| panic!("couldn't find `=` in `{}`", buf2lstr(buf)))
     })
 }
 
@@ -135,7 +134,7 @@ where
 }
 
 /// Quick helper method for a lossy string
-pub fn buf2lstring(buf: &[u8]) -> String {
+pub fn buf2lstr(buf: &[u8]) -> String {
     String::from_utf8_lossy(buf).to_string()
 }
 

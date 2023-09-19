@@ -14,7 +14,7 @@ use std::{
 use cfb::CompoundFile;
 use flate2::read::ZlibDecoder;
 
-use crate::common::split_altium_map;
+use crate::common::{buf2lstr, split_altium_map};
 use crate::error::{AddContext, TruncBuf};
 use crate::parse::{extract_sized_buf, extract_sized_utf8_buf, BufLenMatch};
 use crate::{Error, ErrorKind};
@@ -91,9 +91,10 @@ impl Storage {
         let (mut header, mut rest) =
             extract_sized_buf(buf, BufLenMatch::U32, true).context("parsing storage")?;
 
-        header = &header[..header.len().saturating_sub(1)];
+        // header = &header[..header.len().saturating_sub(1)];
 
         let mut map_kv = split_altium_map(header);
+
         let Some((b"HEADER", b"Icon storage")) = map_kv.next() else {
             return Err(
                 ErrorKind::new_invalid_header(header, "Icon storage").context("parsing storage")

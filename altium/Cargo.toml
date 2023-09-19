@@ -8,24 +8,24 @@ description = "A library for processing Altium file types"
 
 [dependencies]
 altium-macros = { path = "../altium-macros", version = "0.1.0" }
-base64 = "0.21.2"
+base64 = "0.21.4"
 # Use custom rev so we get debug outputs
 cfb = { git = "https://github.com/mdsteele/rust-cfb.git", rev = "5c5279d6" }
 # cfb = "0.8.1"
-flate2 = "1.0.26"
+flate2 = "1.0.27"
 # image = "0.24.6"
-image = { version = "0.24.6", default-features = false, features = ["png", "bmp", "jpeg"] }
+image = { version = "0.24.7", default-features = false, features = ["png", "bmp", "jpeg"] }
 lazy_static = "1.4.0"
 log = "0.4.20"
-num_enum = "0.6.1"
+num_enum = "0.7.0"
 quick-xml = "0.30.0"
-regex = "1.9.1"
+regex = "1.9.5"
 rust-ini = "0.19.0"
-serde = "1.0.181"
+serde = "1.0.188"
 serde-xml-rs = "0.6.0"
 svg = "0.13.1"
 uuid = { version = "1.4.1", features = ["v1", "v4", "fast-rng"]}
-xml-rs = "0.8.16"
+xml-rs = "0.8.18"
 
 [dev-dependencies]
 env_logger = "0.10.0"

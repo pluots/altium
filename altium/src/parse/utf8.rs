@@ -7,7 +7,7 @@
 use std::str;
 
 use crate::{
-    common::{buf2lstring, str_from_utf8},
+    common::{buf2lstr, str_from_utf8},
     ErrorKind,
 };
 
@@ -57,7 +57,7 @@ impl FromUtf8<'_> for bool {
         } else if buf == b"F" {
             Ok(false)
         } else {
-            Err(ErrorKind::ExpectedBool(buf2lstring(buf)))
+            Err(ErrorKind::ExpectedBool(buf2lstr(buf)))
         }
     }
 }
