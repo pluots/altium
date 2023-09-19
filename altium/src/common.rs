@@ -2,7 +2,7 @@ use std::{fmt, str};
 
 use uuid::Uuid;
 
-use crate::error::{ErrorKind, TruncBuf};
+use crate::error::{AddContext, ErrorKind, Result, TruncBuf};
 use crate::parse::{FromUtf8, ParseUtf8};
 
 /// Separator in textlike streams
@@ -289,4 +289,12 @@ pub fn is_number_pattern(s: &[u8], prefix: &[u8]) -> bool {
     }
 
     false
+}
+
+/// Infallible conversion
+pub fn mils_to_nm(mils: i32) -> Result<i32> {
+    const FACTOR: i32 = 25400;
+    mils.checked_mul(FACTOR).ok_or_else(|| {
+        ErrorKind::Overflow(mils.into(), FACTOR.into(), '*').context("converting units")
+    })
 }

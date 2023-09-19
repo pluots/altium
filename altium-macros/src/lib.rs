@@ -325,6 +325,8 @@ fn error_if_map_not_empty(map: &BTreeMap<String, TokenTree>) {
     assert!(map.is_empty(), "unexpected pairs {map:?}");
 }
 
+/// Handle special cases `Location` and `LocationFrac`.
+/// Converts mils -> nm
 fn process_location(
     struct_ident: &Ident,
     field_ident: &Ident,
@@ -339,24 +341,37 @@ fn process_location(
         let x_str_frac = format!("{base_field_str}.X_Frac");
         let y_str_frac = format!("{base_field_str}.Y_Frac");
         vec![
-            (x_str, quote!(ret.#field_ident.x)),
-            (y_str, quote!(ret.#field_ident.y)),
-            (x_str_frac, quote!(ret.#field_ident.x_fract)),
-            (y_str_frac, quote!(ret.#field_ident.y_fract)),
+            (x_str, quote!(ret.#field_ident.x), true),
+            (y_str, quote!(ret.#field_ident.y), true),
+            (x_str_frac, quote!(ret.#field_ident.x_fract), false),
+            (y_str_frac, quote!(ret.#field_ident.y_fract), false),
         ]
     } else {
         vec![
-            (x_str, quote!(ret.#field_ident.x)),
-            (y_str, quote!(ret.#field_ident.y)),
+            (x_str, quote!(ret.#field_ident.x), true),
+            (y_str, quote!(ret.#field_ident.y), true),
         ]
     };
 
-    for (pat_str, assign_field) in check_patterns {
+    for (pat_str, assign_field, scale) in check_patterns {
         let match_pat = Literal::byte_string(pat_str.as_bytes());
         let ctx_msg = make_ctx_message(&match_pat, field_ident, struct_ident);
 
-        let match_arm = quote! {
-            #match_pat => #assign_field = val.parse_as_utf8().context(#ctx_msg)?,
+        // Still haven't figured out how to handle fractions, but we don't
+        // scale them (they overflow)
+        let match_arm = if scale {
+            quote! {
+                #match_pat => #assign_field =
+                    val.parse_as_utf8()
+                        .map_err(Into::into)
+                        .and_then(crate::common::mils_to_nm)
+                        .context(#ctx_msg)?,
+            }
+        } else {
+            quote! {
+                #match_pat => #assign_field =
+                    val.parse_as_utf8().context(#ctx_msg)?,
+            }
         };
 
         match_stmts.push(match_arm);
