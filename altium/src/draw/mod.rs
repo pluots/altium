@@ -1,16 +1,10 @@
 pub(crate) mod canvas;
 mod svg;
 
-use core::{
-    cmp::{max, min},
-    mem,
-};
-
 pub use canvas::{Canvas, DrawImage, DrawLine, DrawPolygon, DrawRectangle, DrawText};
 
 pub use self::svg::SvgCtx;
 pub use crate::common::{Color, Location, PosHoriz, PosVert};
-use crate::font::Font;
 
 pub trait Draw {
     type Context<'a>;

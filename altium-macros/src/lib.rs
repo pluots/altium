@@ -364,7 +364,7 @@ fn process_location(
                 #match_pat => #assign_field =
                     val.parse_as_utf8()
                         .map_err(Into::into)
-                        .and_then(crate::common::mils_to_nm)
+                        .and_then(crate::common::i32_mils_to_nm)
                         .context(#ctx_msg)?,
             }
         } else {

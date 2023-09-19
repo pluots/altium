@@ -1,6 +1,5 @@
 //! Things related to the entire component
 
-use core::fmt::Write;
 use std::cmp::Ordering;
 use std::fs::File;
 use std::io;
@@ -13,10 +12,7 @@ use super::record::parse_all_records;
 use super::storage::Storage;
 use super::{SchDrawCtx, SchRecord};
 use crate::draw::{Canvas, Draw, SvgCtx};
-use crate::error::AddContext;
 use crate::font::FontCollection;
-use crate::sch::pin::SchPin;
-use crate::sch::record::parse_any_record;
 use crate::Error;
 
 /// Representation of a component

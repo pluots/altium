@@ -14,7 +14,7 @@
 //! anything from surface coating up to a 2.2 x 2.2 m PCB in an `i32`, which is more than
 //! sufficient for the vast majority of use cases.
 
-#![allow(unused)]
+// #![allow(unused)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)]
 #![allow(clippy::module_name_repetitions)]

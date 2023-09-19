@@ -6,12 +6,7 @@ use svg::node::{element as el, Text};
 use svg::Node;
 
 use super::{canvas, Canvas};
-use crate::common::Location;
-use crate::{
-    common::{Color, PosHoriz, PosVert, Rotation},
-    font::Font,
-    sch::Justification,
-};
+use crate::common::{PosHoriz, PosVert, Rotation};
 
 #[derive(Clone, Debug)]
 pub struct SvgCtx {
@@ -109,7 +104,6 @@ impl SvgCtx {
 impl Canvas for SvgCtx {
     #[allow(clippy::similar_names)]
     fn draw_text(&mut self, item: canvas::DrawText) {
-        use Justification as J;
         use PosHoriz::{Center, Left, Right};
         use PosVert::{Bottom, Middle, Top};
         use Rotation::{R0, R180, R270, R90};
@@ -128,7 +122,7 @@ impl Canvas for SvgCtx {
             PosHoriz::Right => "end",
         };
 
-        /// Offset of max x from min x
+        // Offset of max x from min x
         let (xoffn, xoffp) = match item.anchor_h {
             Left => (0, width),
             Center => (halfwidth, halfwidth),
@@ -172,7 +166,7 @@ impl Canvas for SvgCtx {
     }
 
     fn draw_line(&mut self, item: canvas::DrawLine) {
-        let dx = item.start.x - item.end.x;
+        // let dx = item.start.x - item.end.x;
         let dy = item.start.y - item.end.y;
 
         let mut node = el::Line::new()
@@ -207,7 +201,7 @@ impl Canvas for SvgCtx {
         // todo!()
     }
 
-    fn draw_image(&mut self, item: canvas::DrawImage) {}
+    fn draw_image(&mut self, _item: canvas::DrawImage) {}
 
     fn add_comment<S: Into<String>>(&mut self, comment: S) {
         let cmt = svg::node::Comment::new(comment);

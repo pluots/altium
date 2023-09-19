@@ -1,11 +1,6 @@
 use std::str;
 
-use crate::{
-    common::{split_once, str_from_utf8},
-    error::TruncBuf,
-    Error,
-    ErrorKind,
-};
+use crate::{common::str_from_utf8, error::TruncBuf, ErrorKind};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BufLenMatch {

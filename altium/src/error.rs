@@ -3,7 +3,6 @@
 use std::borrow::Cow;
 use std::cmp::min;
 use std::fmt;
-use std::fmt::Write;
 use std::io;
 use std::num::{ParseFloatError, ParseIntError};
 use std::str::Utf8Error;
@@ -158,6 +157,7 @@ impl ErrorKind {
         Self::InvalidStream(name.into(), pos)
     }
 
+    #[allow(unused)]
     pub(crate) fn new_invalid_key(key: &[u8]) -> Self {
         Self::InvalidKey(String::from_utf8_lossy(key).into())
     }

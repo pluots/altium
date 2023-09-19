@@ -63,7 +63,7 @@ use super::params::Justification;
 use super::pin::SchPin;
 use crate::common::{Location, LocationFract, ReadOnlyState, UniqueId};
 use crate::error::{AddContext, TruncBuf};
-use crate::font::{Font, FontCollection};
+use crate::font::FontCollection;
 use crate::Error;
 use crate::{
     common::Color,
