@@ -2,6 +2,17 @@
 //!
 //! It is very early in development, so please expect surprises if you are using
 //! it!
+//!
+//! # Units
+//!
+//! Unless otherwise stated, we try to use the following conventions:
+//!
+//! - For integer values, 1 = 1.0 nm
+//! - For floating point values, 1.0 = 1.0 m
+//!
+//! 1nm precision is pretty excessive for what we need. However, it allows us to represent
+//! anything from surface coating up to a 2.2 x 2.2 m PCB in an `i32`, which is more than
+//! sufficient for the vast majority of use cases.
 
 #![allow(unused)]
 #![warn(clippy::pedantic)]
