@@ -19,8 +19,9 @@ use crate::{Error, ErrorKind};
 ///
 /// We try to avoid:
 ///
-/// 1. Decompressing anything we don't have to, and
+/// 1. Decompressing anything we don't have to
 /// 2. Decompressing anything more than once
+/// 3. Storing anything more than once
 ///
 /// So, we have a solution where:
 ///
