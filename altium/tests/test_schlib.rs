@@ -1,3 +1,5 @@
+include!("include_test_util.rs");
+
 use std::cmp::min;
 use std::io::prelude::*;
 use std::{
@@ -30,6 +32,8 @@ const SIMPLE_COMP_NAME2: &str = "PinProperties";
 
 #[test]
 fn test_parse() {
+    test_init_once();
+
     let wd = std::env::current_dir().unwrap();
     println!("working directory: {}", wd.display());
 
@@ -42,6 +46,8 @@ fn test_parse() {
 
 #[test]
 fn test_record() {
+    test_init_once();
+
     let schlib = SchLib::open(SCHLIB_SIMPLE).unwrap();
     let comp = schlib.get_component(SIMPLE_COMP_NAME1).unwrap();
     println!("comp {SIMPLE_COMP_NAME1}:\n{comp:#?}");
@@ -51,6 +57,8 @@ fn test_record() {
 
 #[test]
 fn test_draw_single_svg() {
+    test_init_once();
+
     // Only draw my favorite symbol
     let schlib = SchLib::open(SCHLIB_SIMPLE).unwrap();
     let mut out_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -73,6 +81,8 @@ fn test_draw_single_svg() {
 
 #[test]
 fn test_draw_all_svgs() {
+    test_init_once();
+
     for schlib_path in ALL_SCHLIBS {
         let schlib = SchLib::open(schlib_path).unwrap();
 
@@ -97,6 +107,8 @@ fn test_draw_all_svgs() {
 
 #[test]
 fn test_storage() {
+    test_init_once();
+
     let schlib = SchLib::open(SCHLIB_SIMPLE).unwrap();
     let mut out_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     out_dir.extend(["test_output", "storage"]);

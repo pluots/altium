@@ -7,14 +7,14 @@
 use std::str;
 
 use crate::{
-    common::{buf2lstring, str_from_utf8},
+    common::{buf2lstr, str_from_utf8},
     ErrorKind,
 };
 
 /// Extension trait for `&[u8]` that will parse a string as utf8/ASCII for
 /// anything implementing `FromUtf8`
 pub trait ParseUtf8<'a> {
-    /// Parse this as utf8 to whatever the target type is
+    /// Parse this as a utf8 string to whatever the target type is
     fn parse_as_utf8<T: FromUtf8<'a>>(self) -> Result<T, ErrorKind>;
 }
 
@@ -57,7 +57,7 @@ impl FromUtf8<'_> for bool {
         } else if buf == b"F" {
             Ok(false)
         } else {
-            Err(ErrorKind::ExpectedBool(buf2lstring(buf)))
+            Err(ErrorKind::ExpectedBool(buf2lstr(buf)))
         }
     }
 }

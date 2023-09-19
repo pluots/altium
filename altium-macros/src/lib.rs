@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use convert_case::{Case, Casing};
 use proc_macro::TokenStream;
-use proc_macro2::{Ident, Literal, Span, TokenStream as TokenStream2, TokenTree};
+use proc_macro2::{Delimiter, Ident, Literal, Span, TokenStream as TokenStream2, TokenTree};
 use quote::{quote, ToTokens};
 use syn::{parse2, Attribute, Data, DeriveInput, Meta, Type};
 
@@ -45,11 +45,19 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
         panic!("record id should be a literal");
     };
 
+    // Handle cases where we want to box the struct
     let use_box = match struct_attr_map.remove("use_box") {
         Some(TokenTree::Ident(val)) if val == "true" => true,
         Some(TokenTree::Ident(val)) if val == "false" => true,
         Some(v) => panic!("Expected ident but got {v:?}"),
         None => false,
+    };
+
+    // Handle cases where our struct doesn't have the same name as the enum variant
+    let record_variant = match struct_attr_map.remove("record_variant") {
+        Some(TokenTree::Ident(val)) => val,
+        Some(v) => panic!("Expected ident but got {v:?}"),
+        None => name.clone(),
     };
 
     error_if_map_not_empty(&struct_attr_map);
@@ -72,7 +80,11 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
                     .remove("count")
                     .expect("missing 'count' attribute");
 
-                process_array(&name, &field_name, count_ident, &mut match_stmts);
+                let arr_map = field_attr_map
+                    .remove("map")
+                    .expect("missing 'map' attribute");
+
+                process_array(&name, &field_name, count_ident, arr_map, &mut match_stmts);
                 error_if_map_not_empty(&field_attr_map);
                 continue;
             } else if arr_val_str != "false" {
@@ -129,7 +141,9 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
             let def_flag = quote! { let mut #flag_ident: bool = false; };
             let check_flag = quote! {
                 if #flag_ident {
-                    ::log::debug!("skipping {} after finding utf8", #field_name_str);
+                    ::log::debug!(concat!(
+                        "skipping ", #field_name_str, " after finding utf8 version"
+                    ));
                     continue;
                 }
             };
@@ -164,9 +178,9 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
     }
 
     let ret_val = if use_box {
-        quote! { Ok(SchRecord::#name(Box::new(ret))) }
+        quote! { Ok(SchRecord::#record_variant(Box::new(ret))) }
     } else {
-        quote! { Ok(SchRecord::#name(ret)) }
+        quote! { Ok(SchRecord::#record_variant(ret)) }
     };
 
     let ret = quote! {
@@ -198,7 +212,7 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
 
 /// Next type of token we are expecting
 #[derive(Clone, Debug, PartialEq)]
-enum AttrState {
+enum AttrParseState {
     Key,
     /// Contains the last key we had
     Eq(String),
@@ -218,40 +232,105 @@ fn parse_attrs(attrs: Vec<Attribute>) -> Option<BTreeMap<String, TokenTree>> {
         panic!("invalid usage; use `#[from_record(...=..., ...)]`");
     };
 
-    let mut state = AttrState::Key;
+    let mut state = AttrParseState::Key;
     let mut map = BTreeMap::new();
 
     for token in list.tokens {
         match state {
-            AttrState::Key => {
+            AttrParseState::Key => {
                 let TokenTree::Ident(idtoken) = token else {
                     panic!("expected an identifier at {token}");
                 };
-                state = AttrState::Eq(idtoken.to_string());
+                state = AttrParseState::Eq(idtoken.to_string());
             }
-            AttrState::Eq(key) => {
-                match token {
-                    TokenTree::Punct(v) if v.as_char() == '=' => (),
-                    _ => panic!("expected `=` at {token}"),
+            AttrParseState::Eq(key) => {
+                if !matches!(&token, TokenTree::Punct(v) if v.as_char() == '=') {
+                    panic!("expected `=` at {token}");
                 }
-
-                state = AttrState::Val(key);
+                state = AttrParseState::Val(key);
             }
-            AttrState::Val(key) => {
+            AttrParseState::Val(key) => {
                 map.insert(key, token);
-                state = AttrState::Comma;
+                state = AttrParseState::Comma;
             }
-            AttrState::Comma => {
-                match token {
-                    TokenTree::Punct(v) if v.as_char() == ',' => (),
-                    _ => panic!("expected `,` at {token}"),
-                };
-                state = AttrState::Key;
+            AttrParseState::Comma => {
+                if !matches!(&token, TokenTree::Punct(v) if v.as_char() == ',') {
+                    panic!("expected `,` at {token}");
+                }
+                state = AttrParseState::Key;
             }
         }
     }
 
     Some(map)
+}
+
+/// Next type of token we are expecting
+#[derive(Clone, Debug, PartialEq)]
+enum MapParseState {
+    Key,
+    /// Contains the last key we had
+    Dash(Ident),
+    Gt(Ident),
+    Val(Ident),
+    Comma,
+}
+
+/// Parse a `(X -> x, Y -> y)` map that tells us how to set members based on
+/// found items in an array.
+///
+/// E.g. with the above, `X1` will set `record[1].x`
+fn parse_map(map: TokenTree) -> Vec<(Ident, Ident)> {
+    let mut ret = Vec::new();
+
+    let TokenTree::Group(group) = map else {
+        panic!("expected group but got {map:?}")
+    };
+
+    if group.delimiter() != Delimiter::Parenthesis {
+        panic!("expected parenthese but got {:?}", group.delimiter());
+    };
+
+    let mut state = MapParseState::Key;
+
+    for token in group.stream() {
+        match state {
+            MapParseState::Key => {
+                let TokenTree::Ident(idtoken) = token else {
+                    panic!("expected an identifier at {token}");
+                };
+                state = MapParseState::Dash(idtoken);
+            }
+            MapParseState::Dash(key) => {
+                if !matches!(&token, TokenTree::Punct(v) if v.as_char() == '-') {
+                    panic!("expected `->` at {token}");
+                }
+                state = MapParseState::Gt(key);
+            }
+            MapParseState::Gt(key) => {
+                if !matches!(&token, TokenTree::Punct(v) if v.as_char() == '>') {
+                    panic!("expected `->` at {token}");
+                }
+                state = MapParseState::Val(key);
+            }
+            MapParseState::Val(key) => {
+                let TokenTree::Ident(ident) = token else {
+                    panic!("expcected ident but got {token}");
+                };
+                ret.push((key, ident));
+                state = MapParseState::Comma;
+            }
+            MapParseState::Comma => {
+                if !matches!(&token, TokenTree::Punct(v) if v.as_char() == ',') {
+                    panic!("expected `,` at {token}");
+                }
+
+                state = MapParseState::Key;
+            }
+        }
+    }
+
+    ret
 }
 
 fn error_if_map_not_empty(map: &BTreeMap<String, TokenTree>) {
@@ -263,11 +342,13 @@ fn process_array(
     name: &Ident,
     field_name: &Ident,
     count_ident_tt: TokenTree,
+    arr_map_tt: TokenTree,
     match_stmts: &mut Vec<TokenStream2>,
 ) {
     let TokenTree::Literal(match_pat) = count_ident_tt else {
         panic!("expected a literal for `count`");
     };
+    let arr_map = parse_map(arr_map_tt);
 
     let field_name_str = field_name.to_string();
     let match_pat_str = match_pat.to_string();
@@ -279,45 +360,69 @@ fn process_array(
                 stringify!(#name), "` (via proc macro array)"
             ))?;
 
-            ret.#field_name = vec![crate::common::Location::default(); count];
-        },
-
-        // Set an X value if given
-        xstr if crate::common::is_number_pattern(xstr, b'X') => {
-            let idx: usize = xstr.strip_prefix(b"X").unwrap()
-                .parse_as_utf8()
-                .or_context(|| format!(
-                    "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-                    String::from_utf8_lossy(xstr), #field_name_str, stringify!(#name)
-                ))?;
-
-            let x = val.parse_as_utf8().or_context(|| format!(
-                "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-                String::from_utf8_lossy(xstr), #field_name_str, stringify!(#name)
-            ))?;
-
-            ret.#field_name[idx - 1].x = x;
-        },
-
-        // Set a Y value if given
-        ystr if crate::common::is_number_pattern(ystr, b'Y') => {
-            let idx: usize = ystr.strip_prefix(b"Y").unwrap()
-                .parse_as_utf8()
-                .or_context(|| format!(
-                    "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-                    String::from_utf8_lossy(ystr), #field_name_str, stringify!(#name)
-                ))?;
-
-            let y = val.parse_as_utf8().or_context(|| format!(
-                "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-                String::from_utf8_lossy(ystr), #field_name_str, stringify!(#name)
-            ))?;
-
-            ret.#field_name[idx - 1].y = y;
+            ret.#field_name = vec![Default::default(); count].into();
         },
     };
 
     match_stmts.push(count_match);
+
+    for (match_pfx, assign_value) in arr_map {
+        let match_pfx_bstr = Literal::byte_string(match_pfx.to_string().as_bytes());
+
+        let item_match = quote! {
+            match_val if crate::common::is_number_pattern(match_val, #match_pfx_bstr) => {
+                let idx: usize = match_val.strip_prefix(#match_pfx_bstr).unwrap()
+                    .parse_as_utf8()
+                    .or_context(|| format!(
+                        "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
+                        String::from_utf8_lossy(match_val), #field_name_str, stringify!(#name)
+                    ))?;
+
+                let parsed_val = val.parse_as_utf8().or_context(|| format!(
+                    "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
+                    String::from_utf8_lossy(match_val), #field_name_str, stringify!(#name)
+                ))?;
+
+                ret.#field_name[idx - 1].#assign_value = parsed_val;
+            },
+        };
+        match_stmts.push(item_match);
+    }
+
+    //     // Set an X value if given
+    //     xstr if crate::common::is_number_pattern(xstr, b'X') => {
+    //         let idx: usize = xstr.strip_prefix(b"X").unwrap()
+    //             .parse_as_utf8()
+    //             .or_context(|| format!(
+    //                 "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
+    //                 String::from_utf8_lossy(xstr), #field_name_str, stringify!(#name)
+    //             ))?;
+
+    //         let x = val.parse_as_utf8().or_context(|| format!(
+    //             "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
+    //             String::from_utf8_lossy(xstr), #field_name_str, stringify!(#name)
+    //         ))?;
+
+    //         ret.#field_name[idx - 1].x = x;
+    //     },
+
+    //     // Set a Y value if given
+    //     ystr if crate::common::is_number_pattern(ystr, b'Y') => {
+    //         let idx: usize = ystr.strip_prefix(b"Y").unwrap()
+    //             .parse_as_utf8()
+    //             .or_context(|| format!(
+    //                 "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
+    //                 String::from_utf8_lossy(ystr), #field_name_str, stringify!(#name)
+    //             ))?;
+
+    //         let y = val.parse_as_utf8().or_context(|| format!(
+    //             "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
+    //             String::from_utf8_lossy(ystr), #field_name_str, stringify!(#name)
+    //         ))?;
+
+    //         ret.#field_name[idx - 1].y = y;
+    //     },
+    // };
 }
 
 /// From a field in our struct, create the name we should match by

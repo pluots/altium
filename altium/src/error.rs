@@ -1,5 +1,6 @@
 //! Error types used throughout this crate
 
+use std::borrow::Cow;
 use std::cmp::min;
 use std::fmt;
 use std::fmt::Write;
@@ -71,39 +72,47 @@ impl fmt::Debug for Error {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ErrorKind {
-    Io(io::Error),
-    IniFormat(Box<ini::ParseError>),
-    MissingSection(String),
-    MissingUniqueId(String),
-    InvalidUniqueId(TruncBuf<u8>),
-    InvalidStorageData(TruncBuf<u8>),
-    FileType(String, &'static str),
-    InvalidStream(Box<str>, usize),
-    RequiredSplit(String),
-    Utf8(Utf8Error, String),
-    ExpectedInt(String, ParseIntError),
-    ExpectedFloat(String, ParseFloatError),
-    InvalidKey(Box<str>),
-    InvalidHeader(Box<str>),
+    BufferTooShort(usize, TruncBuf<u8>),
+    ElectricalType(u8),
     ExpectedBool(String),
     ExpectedColor(TruncBuf<u8>),
-    SheetStyle(u8),
-    ReadOnlyState(u8),
-    Justification(u8),
-    Pin(PinError),
-    BufferTooShort(usize, TruncBuf<u8>),
+    ExpectedFloat(String, ParseFloatError),
+    ExpectedInt(String, ParseIntError),
+    ExpectedNul(TruncBuf<u8>),
+    FileType(String, &'static str),
     Image(image::ImageError),
+    IniFormat(Box<ini::ParseError>),
+    InvalidHeader(Box<str>, &'static str),
+    InvalidKey(Box<str>),
+    InvalidStorageData(TruncBuf<u8>),
+    InvalidStream(Box<str>, usize),
+    InvalidUniqueId(TruncBuf<u8>),
+    Io(io::Error),
+    Justification(u8),
+    MissingSection(String),
+    MissingUniqueId,
+    Pin(PinError),
+    ReadOnlyState(u8),
+    RequiredSplit(String),
+    SheetStyle(u8),
+    Utf8(Utf8Error, String),
 }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ErrorKind::IniFormat(e) => write!(f, "error parsing ini: {e}"),
+            ErrorKind::ElectricalType(e) => write!(f, "invalid electrical type {e}"),
             ErrorKind::Io(e) => write!(f, "io error: {e}"),
             ErrorKind::MissingSection(e) => write!(f, "missing required section `{e}`"),
-            ErrorKind::MissingUniqueId(e) => write!(f, "bad or missing unique ID section `{e}`"),
+            ErrorKind::MissingUniqueId => write!(f, "bad or missing unique ID section"),
             ErrorKind::InvalidUniqueId(e) => {
-                write!(f, "invalid unique ID section `{e}` (len {})", e.orig_len)
+                write!(
+                    f,
+                    "invalid unique ID section `{e}` (len {}, `{}`)",
+                    e.orig_len,
+                    e.as_str()
+                )
             }
             ErrorKind::FileType(n, ty) => write!(f, "file `{n}` is not a valid {ty} file"),
             ErrorKind::InvalidStream(s, n) => {
@@ -116,7 +125,7 @@ impl fmt::Display for ErrorKind {
                 write!(f, "invalid storage data near `{e:x}`")
             }
             ErrorKind::Utf8(e, s) => write!(f, "utf8 error: {e} at '{s}'"),
-            ErrorKind::InvalidHeader(e) => write!(f, "invalid header '{e}'"),
+            ErrorKind::InvalidHeader(e, v) => write!(f, "invalid header '{e}'; expected `{v}`"),
             ErrorKind::ExpectedInt(s, e) => write!(f, "error parsing integer from `{s}`: {e}"),
             ErrorKind::ExpectedFloat(s, e) => write!(f, "error parsing float from `{s}`: {e}"),
             ErrorKind::InvalidKey(s) => write!(f, "invalid key found: `{s}`"),
@@ -132,6 +141,7 @@ impl fmt::Display for ErrorKind {
                 b.len()
             ),
             ErrorKind::Image(e) => write!(f, "image error: {e}"),
+            ErrorKind::ExpectedNul(e) => write!(f, "expected nul near {e}"),
         }
     }
 }
@@ -147,8 +157,8 @@ impl ErrorKind {
         Self::InvalidKey(String::from_utf8_lossy(key).into())
     }
 
-    pub(crate) fn new_invalid_header(header: &[u8]) -> Self {
-        Self::InvalidHeader(String::from_utf8_lossy(header).into())
+    pub(crate) fn new_invalid_header(header: &[u8], expected: &'static str) -> Self {
+        Self::InvalidHeader(String::from_utf8_lossy(header).into(), expected)
     }
 }
 
@@ -327,6 +337,12 @@ impl<T: Clone + Copy> TruncBuf<T> {
     /// Length of the original buffer
     pub(crate) fn len(&self) -> usize {
         self.orig_len
+    }
+}
+
+impl TruncBuf<u8> {
+    pub(crate) fn as_str(&self) -> Cow<str> {
+        String::from_utf8_lossy(&self.buf)
     }
 }
 
