@@ -34,7 +34,7 @@ pub fn derive_fromrecord(tokens: TokenStream) -> TokenStream {
 
 fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
     let parsed: DeriveInput = parse2(tokens)?;
-    let name = parsed.ident;
+    let struct_ident = parsed.ident;
     let Data::Struct(data) = parsed.data else {
         panic!("only usable on structs");
     };
@@ -57,22 +57,28 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
     let record_variant = match struct_attr_map.remove("record_variant") {
         Some(TokenTree::Ident(val)) => val,
         Some(v) => panic!("Expected ident but got {v:?}"),
-        None => name.clone(),
+        None => struct_ident.clone(),
     };
 
     error_if_map_not_empty(&struct_attr_map);
 
-    let mut match_stmts: Vec<TokenStream2> = Vec::new();
+    // Collect each match arm and flag initializers that we will concat
+    // into our implementation
+    let mut match_arms: Vec<TokenStream2> = Vec::new();
     let mut outer_flags: Vec<TokenStream2> = Vec::new();
 
+    // Loop through each field in the struct
     for field in data.fields {
         let Type::Path(path) = field.ty else {
             panic!("invalid type")
         };
 
-        let field_name = field.ident.unwrap();
+        let field_ident = field.ident.unwrap();
+
+        // Parse attributes that exist on the field
         let mut field_attr_map = parse_attrs(field.attrs).unwrap_or_default();
 
+        // Check if we need to parse an array
         if let Some(arr_val) = field_attr_map.remove("array") {
             let arr_val_str = arr_val.to_string();
             if arr_val_str == "true" {
@@ -84,7 +90,13 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
                     .remove("map")
                     .expect("missing 'map' attribute");
 
-                process_array(&name, &field_name, count_ident, arr_map, &mut match_stmts);
+                process_array(
+                    &struct_ident,
+                    &field_ident,
+                    count_ident,
+                    arr_map,
+                    &mut match_arms,
+                );
                 error_if_map_not_empty(&field_attr_map);
                 continue;
             } else if arr_val_str != "false" {
@@ -97,84 +109,60 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
         let match_pat = match field_attr_map.remove("rename") {
             Some(TokenTree::Literal(v)) => v,
             Some(v) => panic!("expected literal, got {v:?}"),
-            None => create_key_name(&field_name),
+            None => create_key_name(&field_ident),
         };
 
         // If we haven't consumed all attributes, yell
         error_if_map_not_empty(&field_attr_map);
 
-        let match_lit = match_pat.to_string();
-        let field_name_str = field_name.to_string();
         let update_stmt = if path.path.segments.first().unwrap().ident == "Option" {
-            // Optional return
-            quote! { ret.#field_name = Some(parsed); }
+            // Wrap our field is an `Option<T>`
+            quote! { ret.#field_ident = Some(parsed); }
         } else {
-            quote! { ret.#field_name = parsed; }
+            quote! { ret.#field_ident = parsed; }
         };
 
-        // Altium does this weird thing where it will create a `%UTF8%` key and
-        // a key without that.
         let path_str = path.to_token_stream().to_string();
-        let add_utf8_match = path_str.contains("String") || path_str.contains("str");
 
-        let (utf8_pat, utf8_def_flag, utf8_check_flag) = if add_utf8_match {
-            let match_pat_utf8 = create_key_name_utf8(&match_pat);
-            let match_lit_utf8 = match_pat.to_string();
-            let flag_ident = Ident::new(
-                &format!("{field_name_str}_found_utf8_field"),
-                Span::call_site(),
+        // Types `Location` and `LocationFract` are special cases
+        let is_location_fract = path_str.contains("LocationFract");
+        if is_location_fract || path_str.contains("Location") {
+            process_location(
+                &struct_ident,
+                &field_ident,
+                is_location_fract,
+                &mut match_arms,
             );
+            continue;
+        }
 
-            let pat = quote! {
-                #match_pat_utf8 => {
-                    let parsed = val.parse_as_utf8()
-                        // Add context of what we were trying to parse for errors
-                        .context(concat!(
-                            "while matching `", #match_lit_utf8, "` (`", #field_name_str ,
-                            "`) for `", stringify!(#name), "` (via proc macro)"
-                        ))?;
-
-                    #flag_ident = true;
-                    #update_stmt
-                },
-            };
-            let def_flag = quote! { let mut #flag_ident: bool = false; };
-            let check_flag = quote! {
-                if #flag_ident {
-                    ::log::debug!(concat!(
-                        "skipping ", #field_name_str, " after finding utf8 version"
-                    ));
-                    continue;
-                }
-            };
-
-            (pat, def_flag, check_flag)
+        let Utf8Handler {
+            arm: utf8_arm,
+            define_flag: utf8_def_flag,
+            check_flag: utf8_check_flag,
+        } = if path_str.contains("String") || path_str.contains("str") {
+            // Altium does this weird thing where it will create a normal key and a key
+            // with `%UTF8%` if a value is utf8. We need to discard those redundant values
+            make_utf8_handler(&match_pat, &field_ident, &struct_ident, &update_stmt)
         } else {
-            (
-                TokenStream2::new(),
-                TokenStream2::new(),
-                TokenStream2::new(),
-            )
+            Utf8Handler::default()
         };
+
+        let ctx_msg = make_ctx_message(&match_pat, &field_ident, &struct_ident);
 
         let quoted = quote! {
-            #utf8_pat
+            #utf8_arm
 
             #match_pat => {
                 #utf8_check_flag
 
-                let parsed = val.parse_as_utf8()
-                    // Add context of what we were trying to parse for errors
-                    .context(concat!(
-                        "while matching `", #match_lit, "` (`", #field_name_str ,"`) for `",
-                        stringify!(#name), "` (via proc macro)"
-                    ))?;
+                let parsed = val.parse_as_utf8().context(#ctx_msg)?;
                 #update_stmt
             },
         };
 
         outer_flags.push(utf8_def_flag);
-        match_stmts.push(quoted);
+        match_arms.push(quoted);
     }
 
     let ret_val = if use_box {
@@ -184,7 +172,7 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
     };
 
     let ret = quote! {
-        impl FromRecord for #name {
+        impl FromRecord for #struct_ident {
             const RECORD_ID: u32 = #id;
 
             fn from_record<'a, I: Iterator<Item = (&'a [u8], &'a [u8])>>(
@@ -197,8 +185,8 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
 
                 for (key, val) in records {
                     match key {
-                        #(#match_stmts)*
-                        _ => crate::logging::macro_unsupported_key(stringify!(#name), key, val)
+                        #(#match_arms)*
+                        _ => crate::logging::macro_unsupported_key(stringify!(#struct_ident), key, val)
                     }
                 }
 
@@ -280,7 +268,7 @@ enum MapParseState {
 /// found items in an array.
 ///
 /// E.g. with the above, `X1` will set `record[1].x`
-fn parse_map(map: TokenTree) -> Vec<(Ident, Ident)> {
+fn parse_attr_map(map: TokenTree) -> Vec<(Ident, Ident)> {
     let mut ret = Vec::new();
 
     let TokenTree::Group(group) = map else {
@@ -337,10 +325,48 @@ fn error_if_map_not_empty(map: &BTreeMap<String, TokenTree>) {
     assert!(map.is_empty(), "unexpected pairs {map:?}");
 }
 
+fn process_location(
+    struct_ident: &Ident,
+    field_ident: &Ident,
+    is_location_fract: bool,
+    match_stmts: &mut Vec<TokenStream2>,
+) {
+    let base_field_str = field_ident.to_string().to_case(Case::Pascal);
+    let x_str = format!("{base_field_str}.X");
+    let y_str = format!("{base_field_str}.Y");
+
+    let check_patterns = if is_location_fract {
+        let x_str_frac = format!("{base_field_str}.X_Frac");
+        let y_str_frac = format!("{base_field_str}.Y_Frac");
+        vec![
+            (x_str, quote!(ret.#field_ident.x)),
+            (y_str, quote!(ret.#field_ident.y)),
+            (x_str_frac, quote!(ret.#field_ident.x_fract)),
+            (y_str_frac, quote!(ret.#field_ident.y_fract)),
+        ]
+    } else {
+        vec![
+            (x_str, quote!(ret.#field_ident.x)),
+            (y_str, quote!(ret.#field_ident.y)),
+        ]
+    };
+
+    for (pat_str, assign_field) in check_patterns {
+        let match_pat = Literal::byte_string(pat_str.as_bytes());
+        let ctx_msg = make_ctx_message(&match_pat, field_ident, struct_ident);
+
+        let match_arm = quote! {
+            #match_pat => #assign_field = val.parse_as_utf8().context(#ctx_msg)?,
+        };
+
+        match_stmts.push(match_arm);
+    }
+}
+
 /// Setup handling of `X1 = 1234, Y1 = 909`
 fn process_array(
-    name: &Ident,
-    field_name: &Ident,
+    struct_ident: &Ident,
+    field_ident: &Ident,
     count_ident_tt: TokenTree,
     arr_map_tt: TokenTree,
     match_stmts: &mut Vec<TokenStream2>,
@@ -348,19 +374,17 @@ fn process_array(
     let TokenTree::Literal(match_pat) = count_ident_tt else {
         panic!("expected a literal for `count`");
     };
-    let arr_map = parse_map(arr_map_tt);
+    let arr_map = parse_attr_map(arr_map_tt);
 
-    let field_name_str = field_name.to_string();
-    let match_pat_str = match_pat.to_string();
+    let field_name_str = field_ident.to_string();
+    let ctx_msg = make_ctx_message(&match_pat, field_ident, struct_ident);
+
     let count_match = quote! {
         // Set the length of our array once given
         #match_pat => {
-            let count = val.parse_as_utf8().context(concat!(
-                "while matching `", #match_pat_str, "` (`", #field_name_str ,"`) for `",
-                stringify!(#name), "` (via proc macro array)"
-            ))?;
+            let count = val.parse_as_utf8().context(#ctx_msg)?;
 
-            ret.#field_name = vec![Default::default(); count].into();
+            ret.#field_ident = vec![Default::default(); count].into();
         },
     };
 
@@ -375,54 +399,79 @@ fn process_array(
                     .parse_as_utf8()
                     .or_context(|| format!(
                         "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-                        String::from_utf8_lossy(match_val), #field_name_str, stringify!(#name)
+                        String::from_utf8_lossy(match_val), #field_name_str, stringify!(#struct_ident)
                     ))?;
 
                 let parsed_val = val.parse_as_utf8().or_context(|| format!(
                     "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-                    String::from_utf8_lossy(match_val), #field_name_str, stringify!(#name)
+                    String::from_utf8_lossy(match_val), #field_name_str, stringify!(#struct_ident)
                 ))?;
 
-                ret.#field_name[idx - 1].#assign_value = parsed_val;
+                ret.#field_ident[idx - 1].#assign_value = parsed_val;
             },
         };
         match_stmts.push(item_match);
     }
+}
 
-    //     // Set an X value if given
-    //     xstr if crate::common::is_number_pattern(xstr, b'X') => {
-    //         let idx: usize = xstr.strip_prefix(b"X").unwrap()
-    //             .parse_as_utf8()
-    //             .or_context(|| format!(
-    //                 "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-    //                 String::from_utf8_lossy(xstr), #field_name_str, stringify!(#name)
-    //             ))?;
+#[derive(Debug, Default)]
+struct Utf8Handler {
+    /// The match arm
+    arm: TokenStream2,
+    /// Definition of a `fieldname_found_utf8_field` flag
+    define_flag: TokenStream2,
+    /// Checking if a flag is set
+    check_flag: TokenStream2,
+}
 
-    //         let x = val.parse_as_utf8().or_context(|| format!(
-    //             "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-    //             String::from_utf8_lossy(xstr), #field_name_str, stringify!(#name)
-    //         ))?;
+fn make_utf8_handler(
+    match_pat: &Literal,
+    field_ident: &Ident,
+    struct_ident: &Ident,
+    update_stmt: &TokenStream2,
+) -> Utf8Handler {
+    let match_pat = create_key_name_utf8(match_pat);
+    let field_name_str = field_ident.to_string();
+    let flag_ident = Ident::new(
+        &format!("{field_name_str}_found_utf8_field"),
+        Span::call_site(),
+    );
 
-    //         ret.#field_name[idx - 1].x = x;
-    //     },
+    let ctx_msg = make_ctx_message(&match_pat, field_ident, struct_ident);
+    let arm = quote! {
+        #match_pat => {
+            let parsed = val.parse_as_utf8()
+                // Add context of what we were trying to parse for errors
+                .context(#ctx_msg)?;
 
-    //     // Set a Y value if given
-    //     ystr if crate::common::is_number_pattern(ystr, b'Y') => {
-    //         let idx: usize = ystr.strip_prefix(b"Y").unwrap()
-    //             .parse_as_utf8()
-    //             .or_context(|| format!(
-    //                 "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-    //                 String::from_utf8_lossy(ystr), #field_name_str, stringify!(#name)
-    //             ))?;
+            #flag_ident = true;
+            #update_stmt
+        },
+    };
+    let define_flag = quote! { let mut #flag_ident: bool = false; };
+    let check_flag = quote! {
+        if #flag_ident {
+            ::log::trace!(concat!(
+                "skipping ", #field_name_str, " after finding utf8 version"
+            ));
+            continue;
+        }
+    };
 
-    //         let y = val.parse_as_utf8().or_context(|| format!(
-    //             "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-    //             String::from_utf8_lossy(ystr), #field_name_str, stringify!(#name)
-    //         ))?;
+    Utf8Handler {
+        arm,
+        define_flag,
+        check_flag,
+    }
+}
 
-    //         ret.#field_name[idx - 1].y = y;
-    //     },
-    // };
+/// Make a message with our error context
+fn make_ctx_message(pattern: &Literal, field_ident: &Ident, struct_ident: &Ident) -> Literal {
+    let s = format!(
+        "while matching `{}` (`{}`) for `{}` (via proc macro)",
+        pattern, field_ident, struct_ident
+    );
+    Literal::string(&s)
 }
 
 /// From a field in our struct, create the name we should match by

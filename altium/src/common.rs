@@ -16,6 +16,15 @@ pub struct Location {
     pub y: i32,
 }
 
+/// Location with fraction
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct LocationFract {
+    pub x: i32,
+    pub x_fract: i32,
+    pub y: i32,
+    pub y_fract: i32,
+}
+
 impl Location {
     #[must_use]
     pub fn new(x: i32, y: i32) -> Self {
