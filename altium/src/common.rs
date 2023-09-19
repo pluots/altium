@@ -83,6 +83,7 @@ pub enum UniqueId {
 }
 
 impl UniqueId {
+    #[allow(unused)]
     fn from_slice<S: AsRef<[u8]>>(buf: S) -> Option<Self> {
         buf.as_ref()
             .try_into()
@@ -294,8 +295,15 @@ pub fn is_number_pattern(s: &[u8], prefix: &[u8]) -> bool {
 }
 
 /// Infallible conversion
-pub fn mils_to_nm(mils: i32) -> Result<i32> {
+pub fn i32_mils_to_nm(mils: i32) -> Result<i32> {
     const FACTOR: i32 = 25400;
+    mils.checked_mul(FACTOR).ok_or_else(|| {
+        ErrorKind::Overflow(mils.into(), FACTOR.into(), '*').context("converting units")
+    })
+}
+
+pub fn u32_mils_to_nm(mils: u32) -> Result<u32> {
+    const FACTOR: u32 = 25400;
     mils.checked_mul(FACTOR).ok_or_else(|| {
         ErrorKind::Overflow(mils.into(), FACTOR.into(), '*').context("converting units")
     })

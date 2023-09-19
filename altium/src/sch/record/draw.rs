@@ -1,19 +1,16 @@
 //! How to draw records, components, etc
-use base64::{engine::general_purpose::STANDARD_NO_PAD, Engine};
-use svg::node::{element as el, Text};
-use svg::Node;
 
 use crate::common::{Color, Location, PosHoriz, PosVert, Rotation, Visibility};
 use crate::draw::canvas::DrawRectangle;
 use crate::draw::canvas::{Canvas, DrawLine, DrawText};
 use crate::draw::{Draw, DrawPolygon};
-use crate::font::{Font, FontCollection};
-use crate::sch::params::Justification;
+use crate::font::FontCollection;
 use crate::sch::pin::SchPin;
 use crate::sch::record;
 use crate::sch::storage::Storage;
 
 // 500k embedded
+#[allow(unused)]
 const MAX_EMBED_SIZE: usize = 500_000;
 
 // FIXME: This context is super bad and weird with, like, triple indirection
@@ -73,15 +70,12 @@ impl Draw for record::SchRecord {
 impl Draw for SchPin {
     type Context<'a> = SchDrawCtx<'a>;
 
-    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
-        use PosHoriz::{Center, Left, Right};
-        use PosVert::{Bottom, Middle, Top};
+    fn draw<C: Canvas>(&self, canvas: &mut C, _ctx: &SchDrawCtx<'_>) {
+        use PosHoriz::{Left, Right};
+        use PosVert::{Bottom, Middle};
         use Rotation::{R0, R180, R270, R90};
 
         canvas.add_comment(format!("{self:#?}"));
-
-        let len: i32 = self.length.try_into().unwrap();
-        let (x1, y1) = (self.location_x, self.location_y);
 
         let start = self.location();
         let end = self.location_conn();
@@ -182,7 +176,7 @@ impl Draw for record::Label {
 impl Draw for record::PolyLine {
     type Context<'a> = SchDrawCtx<'a>;
 
-    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &Self::Context<'_>) {
+    fn draw<C: Canvas>(&self, canvas: &mut C, _ctx: &Self::Context<'_>) {
         for window in self.locations.windows(2) {
             let &[a, b] = window else { unreachable!() };
 
@@ -199,7 +193,7 @@ impl Draw for record::PolyLine {
 impl Draw for record::Polygon {
     type Context<'a> = SchDrawCtx<'a>;
 
-    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
+    fn draw<C: Canvas>(&self, canvas: &mut C, _ctx: &SchDrawCtx<'_>) {
         canvas.draw_polygon(DrawPolygon {
             locations: &self.locations,
             fill_color: self.area_color,
@@ -215,7 +209,7 @@ impl Draw for record::Polygon {
 impl Draw for record::RectangleRounded {
     type Context<'a> = SchDrawCtx<'a>;
 
-    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
+    fn draw<C: Canvas>(&self, canvas: &mut C, _ctx: &SchDrawCtx<'_>) {
         let width = self.corner.x - self.location.x;
         let height = self.corner.y - self.location.y;
 
@@ -238,7 +232,7 @@ impl Draw for record::RectangleRounded {
 impl Draw for record::Line {
     type Context<'a> = SchDrawCtx<'a>;
 
-    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &Self::Context<'_>) {
+    fn draw<C: Canvas>(&self, canvas: &mut C, _ctx: &Self::Context<'_>) {
         canvas.draw_line(DrawLine {
             start: Location::new(self.location_x, self.location_y),
             end: Location::new(self.corner_x, self.corner_y),
@@ -251,7 +245,7 @@ impl Draw for record::Line {
 impl Draw for record::Rectangle {
     type Context<'a> = SchDrawCtx<'a>;
 
-    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
+    fn draw<C: Canvas>(&self, canvas: &mut C, _ctx: &SchDrawCtx<'_>) {
         let width = self.corner.x - self.location.x;
         let height = self.corner.y - self.location.y;
 
@@ -270,7 +264,7 @@ impl Draw for record::Rectangle {
 impl Draw for record::SheetSymbol {
     type Context<'a> = SchDrawCtx<'a>;
 
-    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
+    fn draw<C: Canvas>(&self, canvas: &mut C, _ctx: &SchDrawCtx<'_>) {
         canvas.draw_rectangle(DrawRectangle {
             x: self.location.x,
             y: self.location.y - self.y_size,
@@ -342,7 +336,7 @@ impl Draw for record::NetLabel {
 impl Draw for record::Bus {
     type Context<'a> = SchDrawCtx<'a>;
 
-    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &Self::Context<'_>) {
+    fn draw<C: Canvas>(&self, canvas: &mut C, _ctx: &Self::Context<'_>) {
         for window in self.locations.windows(2) {
             let &[a, b] = window else { unreachable!() };
 
@@ -359,7 +353,7 @@ impl Draw for record::Bus {
 impl Draw for record::Wire {
     type Context<'a> = SchDrawCtx<'a>;
 
-    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &Self::Context<'_>) {
+    fn draw<C: Canvas>(&self, canvas: &mut C, _ctx: &Self::Context<'_>) {
         for window in self.locations.windows(2) {
             let &[a, b] = window else { unreachable!() };
 
@@ -378,7 +372,7 @@ impl Draw for record::Wire {
 impl Draw for record::Image {
     type Context<'a> = SchDrawCtx<'a>;
 
-    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
+    fn draw<C: Canvas>(&self, _canvas: &mut C, _ctx: &SchDrawCtx<'_>) {
         // TODO
         // TODO: just set to the URL. Maybe set whether or not to encode
         // somehow?

@@ -2,19 +2,14 @@
 //! represented as zlib-compressed data.
 
 use core::fmt;
-use std::ffi::OsStr;
-use std::fmt::LowerHex;
-use std::io::{self, Cursor, Read, Seek, Write};
+use std::io::{Cursor, Read, Seek};
 use std::sync::Mutex;
-use std::{
-    collections::BTreeMap,
-    sync::{Arc, RwLock},
-};
+use std::{collections::BTreeMap, sync::Arc};
 
 use cfb::CompoundFile;
 use flate2::read::ZlibDecoder;
 
-use crate::common::{buf2lstr, split_altium_map};
+use crate::common::split_altium_map;
 use crate::error::{AddContext, TruncBuf};
 use crate::parse::{extract_sized_buf, extract_sized_utf8_buf, BufLenMatch};
 use crate::{Error, ErrorKind};
@@ -88,7 +83,7 @@ impl Storage {
     }
 
     pub(crate) fn parse(buf: &[u8]) -> Result<Self, Error> {
-        let (mut header, mut rest) =
+        let (header, mut rest) =
             extract_sized_buf(buf, BufLenMatch::U32, true).context("parsing storage")?;
 
         // header = &header[..header.len().saturating_sub(1)];
@@ -102,7 +97,7 @@ impl Storage {
         };
 
         // Weight indicates how many items are in the storage
-        let Some((b"Weight", weight_val)) = map_kv.next() else {
+        let Some((b"Weight", _weight_val)) = map_kv.next() else {
             assert!(
                 rest.is_empty(),
                 "weight not present but rest was not empty at {}",

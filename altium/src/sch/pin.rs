@@ -5,14 +5,13 @@ use std::str::{self, Utf8Error};
 
 use altium_macros::FromRecord;
 use log::warn;
-use num_enum::TryFromPrimitive;
 
 use super::SchRecord;
-use crate::common::{Location, Rotation, Visibility};
+use crate::common::{i32_mils_to_nm, u32_mils_to_nm, Location, Rotation, Visibility};
 use crate::error::AddContext;
 use crate::parse::ParseUtf8;
 use crate::parse::{FromRecord, FromUtf8};
-use crate::{ErrorKind, UniqueId};
+use crate::{ErrorKind, Result, UniqueId};
 
 /// Representation of a pin
 ///
@@ -28,8 +27,7 @@ pub struct SchPin {
     // #[from_record(rename = b"PinDesignator")]
     pub(super) designator: Box<str>,
     pub(super) name: Box<str>,
-    pub(super) location_x: i32,
-    pub(super) location_y: i32,
+    pub(super) location: Location,
     pub(super) electrical: ElectricalType,
     #[from_record(rename = b"PinLength")]
     pub(super) length: u32,
@@ -44,21 +42,21 @@ pub struct SchPin {
 }
 
 impl SchPin {
-    pub(crate) fn parse(buf: &[u8]) -> Result<SchRecord, PinError> {
+    pub(crate) fn parse(buf: &[u8]) -> Result<SchRecord> {
         // 6 bytes unknown
         let [_, _, _, _, _, _, rest @ ..] = buf else {
-            return Err(PinError::TooShort(buf.len(), "initial group"));
+            return Err(PinError::TooShort(buf.len(), "initial group").into());
         };
         // 6 more bytes unknown - symbols
         let [_, _, _, _, _, _, rest @ ..] = rest else {
-            return Err(PinError::TooShort(rest.len(), "second group"));
+            return Err(PinError::TooShort(rest.len(), "second group").into());
         };
 
         let (description, rest) = sized_buf_to_utf8(rest, "description")?;
 
         // TODO: ty_info
-        let [formal_type, ty_info, rot_hide, l0, l1, x0, x1, y0, y1, rest @ ..] = rest else {
-            return Err(PinError::TooShort(rest.len(), "position extraction"));
+        let [formal_type, _ty_info, rot_hide, l0, l1, x0, x1, y0, y1, rest @ ..] = rest else {
+            return Err(PinError::TooShort(rest.len(), "position extraction").into());
         };
 
         assert_eq!(
@@ -71,7 +69,7 @@ impl SchPin {
         let location_y = i16::from_le_bytes([*y0, *y1]);
 
         let [_, _, _, _, rest @ ..] = rest else {
-            return Err(PinError::TooShort(rest.len(), "remaining buffer"));
+            return Err(PinError::TooShort(rest.len(), "remaining buffer").into());
         };
 
         let (name, rest) = sized_buf_to_utf8(rest, "name")?;
@@ -81,6 +79,10 @@ impl SchPin {
             warn!("unexpected rest: {rest:02x?}");
         }
 
+        let location = Location {
+            x: i32_mils_to_nm(i32::from(location_x))?,
+            y: i32_mils_to_nm(i32::from(location_y))?,
+        };
         let retval = Self {
             formal_type: *formal_type,
             owner_index: 0,
@@ -88,9 +90,8 @@ impl SchPin {
             description: description.into(),
             designator: designator.into(),
             name: name.into(),
-            location_x: i32::from(location_x),
-            location_y: i32::from(location_y),
-            length: u32::from(length),
+            location,
+            length: u32_mils_to_nm(u32::from(length))?,
             // location_x: i32::from(location_x) * 10,
             // location_y: i32::from(location_y) * 10,
             // length: u32::from(length) * 10,
@@ -105,24 +106,20 @@ impl SchPin {
 
     /// Nonconnecting point of this pin
     pub(crate) fn location(&self) -> Location {
-        Location {
-            x: self.location_x,
-            y: self.location_y,
-        }
+        self.location
     }
 
     /// Altium stores the position of the pin at its non-connecting end. Which
     /// seems dumb. This provides the connecting end.
     pub(crate) fn location_conn(&self) -> Location {
-        let x_orig = self.location_x;
-        let y_orig = self.location_y;
+        let orig = self.location;
         let len = i32::try_from(self.length).unwrap();
 
         let (x, y) = match self.rotation {
-            Rotation::R0 => (x_orig + len, y_orig),
-            Rotation::R90 => (x_orig, y_orig + len),
-            Rotation::R180 => (x_orig - len, y_orig),
-            Rotation::R270 => (x_orig, y_orig - len),
+            Rotation::R0 => (orig.x + len, orig.y),
+            Rotation::R90 => (orig.x, orig.y + len),
+            Rotation::R180 => (orig.x - len, orig.y),
+            Rotation::R270 => (orig.x, orig.y - len),
         };
         Location { x, y }
     }

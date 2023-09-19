@@ -52,7 +52,7 @@ impl<'a> SchLib<Cursor<&'a [u8]>> {
 
 impl<F: Read + Seek> SchLib<F> {
     /// Unique ID of this schematic library
-    fn unique_id(&self) -> UniqueId {
+    pub fn unique_id(&self) -> UniqueId {
         self.header.unique_id
     }
 
@@ -138,7 +138,7 @@ impl<F: Read + Seek> SchLib<F> {
         let mut header = SchLibMeta::parse_cfile(&mut cfile, &mut tmp_buf)?;
         tmp_buf.clear();
 
-        let mut storage = Storage::parse_cfile(&mut cfile, &mut tmp_buf)?;
+        let storage = Storage::parse_cfile(&mut cfile, &mut tmp_buf)?;
         tmp_buf.clear();
 
         update_section_keys(&mut cfile, &mut tmp_buf, &mut header)?;
@@ -381,6 +381,7 @@ impl ComponentMeta {
     /// Number of subparts within a component
     ///
     /// FIXME: this seems to be doubled?
+    #[allow(unused)]
     fn part_count(&self) -> u16 {
         self.part_count
     }

@@ -1,7 +1,6 @@
 use crate::{
     common::{Color, Location, PosHoriz, PosVert, Rotation},
     font::Font,
-    sch::Justification,
 };
 
 /// Generic trait for something that can be drawn. Beware, unstable!
@@ -11,7 +10,7 @@ pub trait Canvas {
     fn draw_polygon(&mut self, item: DrawPolygon);
     fn draw_rectangle(&mut self, item: DrawRectangle);
     fn draw_image(&mut self, item: DrawImage);
-    fn add_comment<S: Into<String>>(&mut self, comment: S) {}
+    fn add_comment<S: Into<String>>(&mut self, _comment: S) {}
 }
 
 /// Helper struct to write some text
