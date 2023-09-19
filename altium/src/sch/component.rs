@@ -95,7 +95,7 @@ impl Component {
         meta.description.as_deref().unwrap_or("")
     }
 
-    /// Compare
+    /// Compare two components based on name only
     pub fn name_cmp(&self, other: &Self) -> Option<Ordering> {
         self.name.partial_cmp(&other.name)
     }

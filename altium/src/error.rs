@@ -10,6 +10,9 @@ use std::str::Utf8Error;
 
 use crate::sch::PinError;
 
+/// The main result type used by this crate
+pub type Result<T, E = Error> = core::result::Result<T, E>;
+
 /// Our main error type is an error ([`ErrorKind`]) plus some context for what
 /// caused it, a quasi-backtrace.
 pub struct Error {
@@ -68,7 +71,7 @@ impl fmt::Debug for Error {
     }
 }
 
-/// A raw error caused somewhere along the file
+/// A raw error without context
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ErrorKind {
@@ -80,8 +83,8 @@ pub enum ErrorKind {
     ExpectedInt(String, ParseIntError),
     ExpectedNul(TruncBuf<u8>),
     FileType(String, &'static str),
-    Image(image::ImageError),
-    IniFormat(Box<ini::ParseError>),
+    Image(Box<image::ImageError>),
+    IniFormat(ini::ParseError),
     InvalidHeader(Box<str>, &'static str),
     InvalidKey(Box<str>),
     InvalidStorageData(TruncBuf<u8>),
@@ -91,6 +94,7 @@ pub enum ErrorKind {
     Justification(u8),
     MissingSection(String),
     MissingUniqueId,
+    Overflow(i64, i64, char),
     Pin(PinError),
     ReadOnlyState(u8),
     RequiredSplit(String),
@@ -142,6 +146,7 @@ impl fmt::Display for ErrorKind {
             ),
             ErrorKind::Image(e) => write!(f, "image error: {e}"),
             ErrorKind::ExpectedNul(e) => write!(f, "expected nul near {e}"),
+            ErrorKind::Overflow(a, b, op) => write!(f, "overflow at {a} {op} {b}"),
         }
     }
 }
@@ -164,7 +169,7 @@ impl ErrorKind {
 
 impl From<ini::ParseError> for ErrorKind {
     fn from(value: ini::ParseError) -> Self {
-        Self::IniFormat(Box::new(value))
+        Self::IniFormat(value)
     }
 }
 
@@ -181,7 +186,7 @@ impl From<ini::Error> for ErrorKind {
     fn from(value: ini::Error) -> Self {
         match value {
             ini::Error::Io(e) => Self::Io(e),
-            ini::Error::Parse(e) => Self::IniFormat(Box::new(e)),
+            ini::Error::Parse(e) => Self::IniFormat(e),
         }
     }
 }
@@ -230,7 +235,7 @@ impl From<PinError> for Error {
 
 impl From<image::ImageError> for ErrorKind {
     fn from(value: image::ImageError) -> Self {
-        Self::Image(value)
+        Self::Image(Box::new(value))
     }
 }
 
@@ -296,6 +301,7 @@ impl<T> AddContext for Result<T, ErrorKind> {
 }
 
 /// A subslice of a buffer for nicer error messages
+#[doc(hidden)]
 #[derive(Clone, Debug)]
 pub struct TruncBuf<T> {
     buf: Box<[T]>,

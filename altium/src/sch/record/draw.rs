@@ -165,8 +165,8 @@ impl Draw for record::Label {
         let font = &ctx.fonts.get_idx(self.font_id.into());
         let (anchor_h, anchor_v) = self.justification.into();
         canvas.draw_text(DrawText {
-            x: self.location_x,
-            y: self.location_y,
+            x: self.location.x,
+            y: self.location.y,
             text: &self.text,
             font,
             anchor_h,
@@ -216,13 +216,13 @@ impl Draw for record::RectangleRounded {
     type Context<'a> = SchDrawCtx<'a>;
 
     fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
-        let width = self.corner_x - self.location_x;
-        let height = self.corner_y - self.location_y;
+        let width = self.corner.x - self.location.x;
+        let height = self.corner.y - self.location.y;
 
         // FIXME: rounded rectangle
         canvas.draw_rectangle(DrawRectangle {
-            x: self.location_x,
-            y: self.location_y,
+            x: self.location.x,
+            y: self.location.y,
             width,
             height,
             fill_color: self.area_color,
@@ -252,12 +252,12 @@ impl Draw for record::Rectangle {
     type Context<'a> = SchDrawCtx<'a>;
 
     fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
-        let width = self.corner_x - self.location_x;
-        let height = self.corner_y - self.location_y;
+        let width = self.corner.x - self.location.x;
+        let height = self.corner.y - self.location.y;
 
         canvas.draw_rectangle(DrawRectangle {
-            x: self.location_x,
-            y: self.location_y,
+            x: self.location.x,
+            y: self.location.y,
             width,
             height,
             fill_color: self.area_color,
@@ -272,8 +272,8 @@ impl Draw for record::SheetSymbol {
 
     fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
         canvas.draw_rectangle(DrawRectangle {
-            x: self.location_x,
-            y: self.location_y - self.y_size,
+            x: self.location.x,
+            y: self.location.y - self.y_size,
             width: self.x_size,
             height: self.y_size,
             fill_color: self.area_color,
@@ -294,12 +294,12 @@ impl Draw for record::Port {
         let h2 = self.height / 2;
         let mut locations = [Location::default(); 6];
 
-        locations[0] = Location::new(self.location_x, self.location_y + h2);
-        locations[1] = Location::new(self.location_x + self.width - h2, self.location_y + h2);
-        locations[2] = Location::new(self.location_x + self.width, self.location_y);
-        locations[3] = Location::new(self.location_x + self.width - h2, self.location_y - h2);
-        locations[4] = Location::new(self.location_x, self.location_y - h2);
-        locations[5] = Location::new(self.location_x, self.location_y + h2);
+        locations[0] = Location::new(self.location.x, self.location.y + h2);
+        locations[1] = Location::new(self.location.x + self.width - h2, self.location.y + h2);
+        locations[2] = Location::new(self.location.x + self.width, self.location.y);
+        locations[3] = Location::new(self.location.x + self.width - h2, self.location.y - h2);
+        locations[4] = Location::new(self.location.x, self.location.y - h2);
+        locations[5] = Location::new(self.location.x, self.location.y + h2);
 
         canvas.draw_polygon(DrawPolygon {
             locations: &locations,
@@ -310,8 +310,8 @@ impl Draw for record::Port {
 
         let font = &ctx.fonts.get_idx(self.font_id.into());
         canvas.draw_text(DrawText {
-            x: self.location_x,
-            y: self.location_y,
+            x: self.location.x,
+            y: self.location.y,
             text: &self.name,
             color: self.text_color,
             font,
@@ -329,8 +329,8 @@ impl Draw for record::NetLabel {
         let font = &ctx.fonts.get_idx(self.font_id.into());
 
         canvas.draw_text(DrawText {
-            x: self.location_x,
-            y: self.location_y,
+            x: self.location.x,
+            y: self.location.y,
             text: &self.text,
             color: self.color,
             font,
@@ -426,8 +426,8 @@ impl Draw for record::Parameter {
     fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
         let font = &ctx.fonts.get_idx(self.font_id.into());
         canvas.draw_text(DrawText {
-            x: self.location_x,
-            y: self.location_y,
+            x: self.location.x,
+            y: self.location.y,
             text: &self.text,
             font,
             ..Default::default()

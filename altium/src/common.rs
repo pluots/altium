@@ -2,7 +2,7 @@ use std::{fmt, str};
 
 use uuid::Uuid;
 
-use crate::error::{ErrorKind, TruncBuf};
+use crate::error::{AddContext, ErrorKind, Result, TruncBuf};
 use crate::parse::{FromUtf8, ParseUtf8};
 
 /// Separator in textlike streams
@@ -14,6 +14,15 @@ const KV_SEP: u8 = b'=';
 pub struct Location {
     pub x: i32,
     pub y: i32,
+}
+
+/// Location with fraction
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct LocationFract {
+    pub x: i32,
+    pub x_fract: i32,
+    pub y: i32,
+    pub y_fract: i32,
 }
 
 impl Location {
@@ -61,13 +70,15 @@ impl FromUtf8<'_> for Visibility {
     }
 }
 
-/// A unique ID
+/// An Altium unique ID.
 ///
+/// Every entity in Altium has a unique ID including files, library items, and records.
 // TODO: figure out what file types use this exact format
 #[derive(Clone, Copy, PartialEq)]
 pub enum UniqueId {
     /// Altium's old style UUID
     Simple([u8; 8]),
+    /// UUID style, used by some newer files
     Uuid(Uuid),
 }
 
@@ -280,4 +291,12 @@ pub fn is_number_pattern(s: &[u8], prefix: &[u8]) -> bool {
     }
 
     false
+}
+
+/// Infallible conversion
+pub fn mils_to_nm(mils: i32) -> Result<i32> {
+    const FACTOR: i32 = 25400;
+    mils.checked_mul(FACTOR).ok_or_else(|| {
+        ErrorKind::Overflow(mils.into(), FACTOR.into(), '*').context("converting units")
+    })
 }
