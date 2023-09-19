@@ -44,14 +44,14 @@ impl Draw for record::SchRecord {
             // record::SchRecord::Arc(v) => v.draw(canvas, ctx),
             record::SchRecord::Line(v) => v.draw(canvas, ctx),
             record::SchRecord::Rectangle(v) => v.draw(canvas, ctx),
-            // record::SchRecord::SheetSymbol(v) => v.draw(canvas, ctx),
+            record::SchRecord::SheetSymbol(v) => v.draw(canvas, ctx),
             // record::SchRecord::SheetEntry(v) => v.draw(canvas, ctx),
             // record::SchRecord::PowerPort(v) => v.draw(canvas, ctx),
-            // record::SchRecord::Port(v) => v.draw(canvas, ctx),
+            record::SchRecord::Port(v) => v.draw(canvas, ctx),
             // record::SchRecord::NoErc(v) => v.draw(canvas, ctx),
-            // record::SchRecord::NetLabel(v) => v.draw(canvas, ctx),
-            // record::SchRecord::Bus(v) => v.draw(canvas, ctx),
-            // record::SchRecord::Wire(v) => v.draw(canvas, ctx),
+            record::SchRecord::NetLabel(v) => v.draw(canvas, ctx),
+            record::SchRecord::Bus(v) => v.draw(canvas, ctx),
+            record::SchRecord::Wire(v) => v.draw(canvas, ctx),
             // record::SchRecord::TextFrame(v) => v.draw(canvas, ctx),
             // record::SchRecord::Junction(v) => v.draw(canvas, ctx),
             record::SchRecord::Image(v) => v.draw(canvas, ctx),
@@ -267,14 +267,112 @@ impl Draw for record::Rectangle {
     }
 }
 
-// impl Draw for record::SheetSymbol {}
+impl Draw for record::SheetSymbol {
+    type Context<'a> = SchDrawCtx<'a>;
+
+    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
+        canvas.draw_rectangle(DrawRectangle {
+            x: self.location_x,
+            y: self.location_y - self.y_size,
+            width: self.x_size,
+            height: self.y_size,
+            fill_color: self.area_color,
+            stroke_color: self.color,
+            stroke_width: self.line_width,
+        });
+    }
+}
+
 // impl Draw for record::SheetEntry {}
 // impl Draw for record::PowerPort {}
-// impl Draw for record::Port {}
+
+impl Draw for record::Port {
+    type Context<'a> = SchDrawCtx<'a>;
+
+    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
+        // match self.io_type
+        let h2 = self.height / 2;
+        let mut locations = [Location::default(); 6];
+
+        locations[0] = Location::new(self.location_x, self.location_y + h2);
+        locations[1] = Location::new(self.location_x + self.width - h2, self.location_y + h2);
+        locations[2] = Location::new(self.location_x + self.width, self.location_y);
+        locations[3] = Location::new(self.location_x + self.width - h2, self.location_y - h2);
+        locations[4] = Location::new(self.location_x, self.location_y - h2);
+        locations[5] = Location::new(self.location_x, self.location_y + h2);
+
+        canvas.draw_polygon(DrawPolygon {
+            locations: &locations,
+            fill_color: self.area_color,
+            stroke_color: self.color,
+            stroke_width: self.border_width.try_into().unwrap(),
+        });
+
+        let font = &ctx.fonts.get_idx(self.font_id.into());
+        canvas.draw_text(DrawText {
+            x: self.location_x,
+            y: self.location_y,
+            text: &self.name,
+            color: self.text_color,
+            font,
+            ..Default::default()
+        });
+    }
+}
+
 // impl Draw for record::NoErc {}
-// impl Draw for record::NetLabel {}
-// impl Draw for record::Bus {}
-// impl Draw for record::Wire {}
+
+impl Draw for record::NetLabel {
+    type Context<'a> = SchDrawCtx<'a>;
+
+    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
+        let font = &ctx.fonts.get_idx(self.font_id.into());
+
+        canvas.draw_text(DrawText {
+            x: self.location_x,
+            y: self.location_y,
+            text: &self.text,
+            color: self.color,
+            font,
+            ..Default::default()
+        });
+    }
+}
+
+impl Draw for record::Bus {
+    type Context<'a> = SchDrawCtx<'a>;
+
+    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &Self::Context<'_>) {
+        for window in self.locations.windows(2) {
+            let &[a, b] = window else { unreachable!() };
+
+            canvas.draw_line(DrawLine {
+                start: a,
+                end: b,
+                color: self.color,
+                width: self.line_width * 4,
+            });
+        }
+    }
+}
+
+impl Draw for record::Wire {
+    type Context<'a> = SchDrawCtx<'a>;
+
+    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &Self::Context<'_>) {
+        for window in self.locations.windows(2) {
+            let &[a, b] = window else { unreachable!() };
+
+            canvas.draw_line(DrawLine {
+                start: a,
+                end: b,
+                color: self.color,
+                width: self.line_width * 4,
+            });
+        }
+    }
+}
+
 // impl Draw for record::TextFrame {}
 // impl Draw for record::Junction {}
 impl Draw for record::Image {

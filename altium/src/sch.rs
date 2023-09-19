@@ -15,5 +15,5 @@ pub use component::Component;
 pub use params::{Justification, SheetStyle};
 pub use pin::PinError;
 pub(crate) use record::{SchDrawCtx, SchRecord};
-pub use schdoc::SchDoc;
+pub use schdoc::{SchDoc, SchDocRecords};
 pub use schlib::{ComponentMeta, ComponentsIter, SchLib};

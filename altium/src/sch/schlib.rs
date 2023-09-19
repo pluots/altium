@@ -27,6 +27,7 @@ pub struct SchLib<F> {
     /// Information contained in the compound file header. We use this as a
     /// lookup to see what we can extract from the file.
     header: SchLibMeta,
+    /// Blob storage used by Altium
     storage: Arc<Storage>,
 }
 
@@ -35,7 +36,9 @@ impl SchLib<File> {
     /// Open a file from disk
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let cfile = cfb::open(&path)?;
-        Self::from_cfile(cfile).or_context(|| format!("opening {}", path.as_ref().display()))
+        Self::from_cfile(cfile)
+            .context("parsing SchLib")
+            .or_context(|| format!("with file {}", path.as_ref().display()))
     }
 }
 
@@ -43,7 +46,7 @@ impl<'a> SchLib<Cursor<&'a [u8]>> {
     /// Open an in-memory file from a buffer
     pub fn from_buffer(buf: &'a [u8]) -> Result<Self, Error> {
         let cfile = cfb::CompoundFile::open(Cursor::new(buf))?;
-        Self::from_cfile(cfile)
+        Self::from_cfile(cfile).context("parsing SchLib from Cursor")
     }
 }
 
@@ -93,12 +96,10 @@ impl<F: Read + Seek> SchLib<F> {
         {
             // Scope of refcell borrow
             let mut cfile_ref = self.cfile.borrow_mut();
-            let mut stream = cfile_ref.open_stream(&data_path).unwrap_or_else(|e| {
-                dbg!(&meta);
-                dbg!(&data_path);
+            let mut stream = cfile_ref.open_stream(&data_path).map_err(|e| {
                 let path_disp = data_path.display();
-                panic!("missing required stream `{path_disp}` with error {e}")
-            });
+                Error::from(e).context(format!("reading required stream `{path_disp}`",))
+            })?;
             stream.read_to_end(&mut buf).unwrap();
         }
 
@@ -224,7 +225,6 @@ impl SchLibMeta {
     /// Magic header found in all streams
     const HEADER: &'static [u8] =
         b"HEADER=Protel for Windows - Schematic Library Editor Binary File Version 5.0";
-    const HEADER_KEY: &'static [u8] = b"HEADER";
 
     // /// Every header starts with this
     // const PFX: &[u8] = &[0x7a, 0x04, 0x00, 0x00, b'|'];
@@ -295,7 +295,7 @@ impl SchLibMeta {
             }
 
             match key {
-                Self::HEADER_KEY => continue,
+                b"HEADER" => continue,
                 b"Weight" => ret.weight = val.parse_as_utf8()?,
                 b"MinorVersion" => ret.minor_version = val.parse_as_utf8()?,
                 b"UniqueID" => ret.unique_id = val.parse_as_utf8()?,
@@ -340,8 +340,8 @@ impl SchLibMeta {
                     let idx: usize = key[Self::COMP_PARTCOUNT_PFX.len()..].parse_as_utf8()?;
                     ret.components[idx].part_count = val.parse_as_utf8()?;
                 }
-                _ => eprintln!(
-                    "unsupported file header key {}:{}",
+                _ => log::warn!(
+                    "unsupported SchLib file header key {}:{}",
                     buf2lstring(key),
                     buf2lstring(val)
                 ),

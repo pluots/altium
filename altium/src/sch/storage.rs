@@ -89,19 +89,15 @@ impl Storage {
 
     pub(crate) fn parse(buf: &[u8]) -> Result<Self, Error> {
         let (mut header, mut rest) =
-            extract_sized_buf(buf, BufLenMatch::U32).context("parsing storage")?;
+            extract_sized_buf(buf, BufLenMatch::U32, true).context("parsing storage")?;
 
-        assert_eq!(
-            header.last(),
-            Some(&0),
-            "expected null termination at {:02x}",
-            TruncBuf::new_end(header)
-        );
         header = &header[..header.len().saturating_sub(1)];
 
         let mut map_kv = split_altium_map(header);
         let Some((b"HEADER", b"Icon storage")) = map_kv.next() else {
-            return Err(ErrorKind::new_invalid_header(header).context("parsing storage"));
+            return Err(
+                ErrorKind::new_invalid_header(header, "Icon storage").context("parsing storage")
+            );
         };
 
         // Weight indicates how many items are in the storage
@@ -129,8 +125,8 @@ impl Storage {
             rest = &rest[5..];
 
             // Path comes first, then data
-            (path, rest) = extract_sized_utf8_buf(rest, BufLenMatch::U8)?;
-            (data, rest) = extract_sized_buf(rest, BufLenMatch::U32)?;
+            (path, rest) = extract_sized_utf8_buf(rest, BufLenMatch::U8, false)?;
+            (data, rest) = extract_sized_buf(rest, BufLenMatch::U32, false)?;
 
             map.insert(
                 path.into(),

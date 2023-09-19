@@ -39,11 +39,26 @@ impl Location {
     }
 }
 
+impl From<(i32, i32)> for Location {
+    fn from(value: (i32, i32)) -> Self {
+        Self {
+            x: value.0,
+            y: value.1,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum Visibility {
     Hidden,
     #[default]
     Visible,
+}
+
+impl FromUtf8<'_> for Visibility {
+    fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
+        todo!("{}", String::from_utf8_lossy(buf))
+    }
 }
 
 /// A unique ID
@@ -202,6 +217,12 @@ impl Rotation {
     }
 }
 
+impl FromUtf8<'_> for Rotation {
+    fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
+        todo!("{}", String::from_utf8_lossy(buf))
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum ReadOnlyState {
     #[default]
@@ -216,7 +237,7 @@ impl TryFrom<u8> for ReadOnlyState {
         let res = match value {
             x if x == Self::ReadWrite as u8 => Self::ReadWrite,
             x if x == Self::ReadOnly as u8 => Self::ReadOnly,
-            _ => return Err(ErrorKind::SheetStyle(value)),
+            _ => return Err(ErrorKind::ReadOnlyState(value)),
         };
 
         Ok(res)
@@ -249,9 +270,9 @@ pub enum PosVert {
 }
 
 /// Verify a number pattern matches, e.g. `X100`
-pub fn is_number_pattern(s: &[u8], prefix: u8) -> bool {
+pub fn is_number_pattern(s: &[u8], prefix: &[u8]) -> bool {
     if let Some(stripped) = s
-        .strip_prefix(&[prefix])
+        .strip_prefix(prefix)
         .map(|s| s.strip_prefix(&[b'-']).unwrap_or(s))
     {
         if stripped.iter().all(u8::is_ascii_digit) {
