@@ -49,10 +49,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
-      - name: List files
-        run: |
-          pwd
-          ls
+        with:
+          lfs: true
       - uses: dtolnay/rust-toolchain@1.70.0
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -- --nocapture
