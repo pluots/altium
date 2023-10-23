@@ -32,7 +32,6 @@ mod parse;
 
 #[doc(hidden)]
 pub mod __private;
-#[doc(hidden)] // docs are unfinished
 pub mod draw;
 pub mod dwf;
 pub mod error;
@@ -42,7 +41,7 @@ pub mod prj;
 pub mod sch;
 
 #[doc(inline)]
-pub use common::UniqueId;
+pub use common::{Location, Rgb, Rotation90, UniqueId, Visibility};
 #[doc(inline)]
 pub use error::{Error, ErrorKind, Result};
 #[doc(inline)]
@@ -51,3 +50,7 @@ pub use pcb::{PcbDoc, PcbLib};
 pub use prj::PrjPcb;
 #[doc(inline)]
 pub use sch::{SchDoc, SchLib};
+
+mod sealed {
+    pub trait Sealed {}
+}

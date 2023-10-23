@@ -25,7 +25,10 @@ impl Error {
         &self.kind
     }
 
-    /// A trace of where this error came from (useful for debugging)
+    /// A trace of where this error came from.
+    ///
+    /// This is a library trace rather than a full frame stacktrace, but it is
+    /// useful for debugging.
     pub fn trace(&self) -> &[Frame] {
         &self.trace
     }
@@ -70,7 +73,7 @@ impl fmt::Debug for Error {
     }
 }
 
-/// A raw error without context
+/// A raw error without context. See [`Error`] for more information.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ErrorKind {

@@ -1,9 +1,9 @@
-#![allow(unused)]
+// #![allow(unused)]
 
 use core::fmt;
 use std::cell::RefCell;
 use std::fs::File;
-use std::io::{self, Cursor, Read, Seek};
+use std::io::{Cursor, Read, Seek};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -13,10 +13,9 @@ use super::record::{parse_all_records, Sheet};
 use super::storage::Storage;
 use super::{SchDrawCtx, SchRecord};
 use crate::common::split_altium_map;
-use crate::draw::Canvas;
-use crate::draw::Draw;
+use crate::draw::{Canvas, Draw};
 use crate::error::AddContext;
-use crate::parse::{extract_sized_buf, extract_sized_utf8_buf, BufLenMatch, ParseUtf8};
+use crate::parse::{extract_sized_buf, BufLenMatch, ParseUtf8};
 use crate::{Error, ErrorKind, UniqueId};
 
 /// Magic string found in the `FileHeader` stream
@@ -26,6 +25,7 @@ const DATA_STREAM: &str = "FileHeader";
 
 /// Representation of a schematic file
 pub struct SchDoc<F> {
+    #[allow(dead_code)]
     cfile: RefCell<CompoundFile<F>>,
     sheet: Sheet,
     records: Vec<SchRecord>,
@@ -53,19 +53,26 @@ impl<'a> SchDoc<Cursor<&'a [u8]>> {
 }
 
 impl<F: Read + Seek> SchDoc<F> {
-    pub fn into_records(self) -> SchDocRecords {
-        SchDocRecords {
-            sheet: self.sheet,
-            records: self.records,
-            storage: self.storage,
-        }
+    /// Iterate over all records
+    pub fn records(&self) -> impl Iterator<Item = &SchRecord> {
+        // FIXME: iterator over the sheet too
+        self.records.iter()
+    }
+
+    /// Draw this schematic document
+    pub fn draw<C: Canvas>(&self, canvas: &mut C) {
+        let ctx = SchDrawCtx {
+            storage: &self.storage,
+            fonts: &self.sheet.fonts,
+        };
+        self.records().for_each(|r| r.draw(canvas, &ctx));
     }
 
     /// Create a `SchLib` representation from any `Read`able compound file.
     fn from_cfile(mut cfile: CompoundFile<F>) -> Result<Self, Error> {
         let mut tmp_buf: Vec<u8> = Vec::new(); // scratch memory
 
-        let mut storage = Storage::parse_cfile(&mut cfile, &mut tmp_buf)?;
+        let storage = Storage::parse_cfile(&mut cfile, &mut tmp_buf)?;
         tmp_buf.clear();
 
         {
@@ -104,24 +111,6 @@ impl<F> fmt::Debug for SchDoc<F> {
         f.debug_struct("SchDoc")
             .field("unique_id", &self.unique_id)
             .finish_non_exhaustive()
-    }
-}
-
-/// Holdover until we figure out how we want to expose this
-#[derive(Debug, Default)]
-pub struct SchDocRecords {
-    sheet: Sheet,
-    records: Vec<SchRecord>,
-    storage: Arc<Storage>,
-}
-
-impl SchDocRecords {
-    pub fn draw<C: Canvas>(&self, canvas: &mut C) {
-        let ctx = SchDrawCtx {
-            storage: &self.storage,
-            fonts: &self.sheet.fonts,
-        };
-        self.records.iter().for_each(|r| r.draw(canvas, &ctx));
     }
 }
 

@@ -7,7 +7,7 @@ use altium_macros::FromRecord;
 use log::warn;
 
 use super::SchRecord;
-use crate::common::{i32_mils_to_nm, u32_mils_to_nm, Location, Rotation, Visibility};
+use crate::common::{i32_mils_to_nm, u32_mils_to_nm, Location, Rotation90, Visibility};
 use crate::error::AddContext;
 use crate::parse::ParseUtf8;
 use crate::parse::{FromRecord, FromUtf8};
@@ -17,25 +17,26 @@ use crate::{ErrorKind, Result, UniqueId};
 ///
 /// Altium stores pins as binary in the schematic libraries but text in the
 /// schematic documents, so we need to parse both.
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 2, record_variant = Pin)]
 pub struct SchPin {
     pub(super) formal_type: u8,
     pub(super) owner_index: u8,
     pub(super) owner_part_id: u8,
-    pub(super) description: Box<str>,
+    pub description: Box<str>,
     // #[from_record(rename = b"PinDesignator")]
-    pub(super) designator: Box<str>,
+    pub designator: Box<str>,
     pub(super) name: Box<str>,
-    pub(super) location: Location,
-    pub(super) electrical: ElectricalType,
+    pub location: Location,
+    pub electrical: ElectricalType,
     #[from_record(rename = b"PinLength")]
     pub(super) length: u32,
     #[from_record(rename = b"SwapIDPart")]
     pub(super) swap_id_part: Box<str>,
-    pub(super) designator_vis: Visibility,
-    pub(super) name_vis: Visibility,
-    pub(super) rotation: Rotation,
+    pub designator_vis: Visibility,
+    pub name_vis: Visibility,
+    pub(super) rotation: Rotation90,
     #[from_record(rename = b"PinPropagationDelay")]
     pub(super) propegation_delay: f32,
     pub(super) unique_id: UniqueId,
@@ -116,10 +117,10 @@ impl SchPin {
         let len = i32::try_from(self.length).unwrap();
 
         let (x, y) = match self.rotation {
-            Rotation::R0 => (orig.x + len, orig.y),
-            Rotation::R90 => (orig.x, orig.y + len),
-            Rotation::R180 => (orig.x - len, orig.y),
-            Rotation::R270 => (orig.x, orig.y - len),
+            Rotation90::R0 => (orig.x + len, orig.y),
+            Rotation90::R90 => (orig.x, orig.y + len),
+            Rotation90::R180 => (orig.x - len, orig.y),
+            Rotation90::R270 => (orig.x, orig.y - len),
         };
         Location { x, y }
     }
@@ -144,16 +145,16 @@ fn sized_buf_to_utf8<'a>(
 /// Given a byte representing rotation and hiding, extract that info
 ///
 /// Returns `(rotation, designator_vis, name_vis)`
-fn get_rotation_and_hiding(val: u8) -> (Rotation, Visibility, Visibility) {
+fn get_rotation_and_hiding(val: u8) -> (Rotation90, Visibility, Visibility) {
     const ROT_MASK: u8 = 0b00000011;
     const VIS_DES_MASK: u8 = 0b00001000;
     const VIS_NAME_MASK: u8 = 0b00010000;
 
     let rotation = match val & ROT_MASK {
-        x if x == Rotation::R0 as u8 => Rotation::R0,
-        x if x == Rotation::R90 as u8 => Rotation::R90,
-        x if x == Rotation::R180 as u8 => Rotation::R180,
-        x if x == Rotation::R270 as u8 => Rotation::R270,
+        x if x == Rotation90::R0 as u8 => Rotation90::R0,
+        x if x == Rotation90::R90 as u8 => Rotation90::R90,
+        x if x == Rotation90::R180 as u8 => Rotation90::R180,
+        x if x == Rotation90::R270 as u8 => Rotation90::R270,
         _ => unreachable!("2-bit patterns covered"),
     };
 

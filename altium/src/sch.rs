@@ -6,14 +6,18 @@ mod params;
 mod pin;
 mod schdoc;
 mod schlib;
-
-pub(crate) mod record;
-
+#[doc(hidden)]
 pub mod storage;
+
+pub mod record;
 
 pub use component::Component;
 pub use params::{Justification, SheetStyle};
-pub use pin::PinError;
-pub(crate) use record::{SchDrawCtx, SchRecord};
-pub use schdoc::{SchDoc, SchDocRecords};
+#[doc(inline)]
+pub use pin::{ElectricalType, PinError, SchPin};
+#[doc(inline)]
+pub use record::{SchDrawCtx, SchRecord};
+pub use schdoc::SchDoc;
 pub use schlib::{ComponentMeta, ComponentsIter, SchLib};
+#[doc(inline)]
+pub use storage::Storage;

@@ -1,10 +1,10 @@
 use crate::{
-    common::{Color, Location, PosHoriz, PosVert, Rotation},
+    common::{Location, PosHoriz, PosVert, Rgb, Rotation90},
     font::Font,
 };
 
 /// Generic trait for something that can be drawn. Beware, unstable!
-pub trait Canvas {
+pub trait Canvas: crate::sealed::Sealed {
     fn draw_text(&mut self, item: DrawText);
     fn draw_line(&mut self, item: DrawLine);
     fn draw_polygon(&mut self, item: DrawPolygon);
@@ -22,15 +22,15 @@ pub struct DrawText<'a> {
     pub font: &'a Font,
     pub anchor_h: PosHoriz,
     pub anchor_v: PosVert,
-    pub color: Color,
-    pub rotation: Rotation,
+    pub color: Rgb,
+    pub rotation: Rotation90,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct DrawLine {
     pub start: Location,
     pub end: Location,
-    pub color: Color,
+    pub color: Rgb,
     pub width: u16,
     // pub width: Option<&'a str>,
 }
@@ -41,16 +41,16 @@ pub struct DrawRectangle {
     pub y: i32,
     pub width: i32,
     pub height: i32,
-    pub fill_color: Color,
-    pub stroke_color: Color,
+    pub fill_color: Rgb,
+    pub stroke_color: Rgb,
     pub stroke_width: u16,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct DrawPolygon<'a> {
     pub locations: &'a [Location],
-    pub fill_color: Color,
-    pub stroke_color: Color,
+    pub fill_color: Rgb,
+    pub stroke_color: Rgb,
     pub stroke_width: u16,
 }
 

@@ -12,8 +12,8 @@ const KV_SEP: u8 = b'=';
 /// Common coordinate type
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Location {
-    pub x: i32,
-    pub y: i32,
+    pub(crate) x: i32,
+    pub(crate) y: i32,
 }
 
 /// Location with fraction
@@ -26,13 +26,23 @@ pub struct LocationFract {
 }
 
 impl Location {
+    #[inline]
+    pub fn x(self) -> i32 {
+        self.x
+    }
+
+    #[inline]
+    pub fn y(self) -> i32 {
+        self.y
+    }
+
     #[must_use]
-    pub fn new(x: i32, y: i32) -> Self {
+    pub(crate) fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
 
     #[must_use]
-    pub fn add_x(self, x: i32) -> Self {
+    pub(crate) fn add_x(self, x: i32) -> Self {
         Self {
             x: self.x + x,
             y: self.y,
@@ -40,7 +50,7 @@ impl Location {
     }
 
     #[must_use]
-    pub fn add_y(self, y: i32) -> Self {
+    pub(crate) fn add_y(self, y: i32) -> Self {
         Self {
             x: self.x,
             y: self.y + y,
@@ -70,13 +80,13 @@ impl FromUtf8<'_> for Visibility {
     }
 }
 
-/// An Altium unique ID.
+/// A unique ID that is assigned by Altium to each element in a design.
 ///
 /// Every entity in Altium has a unique ID including files, library items, and records.
 // TODO: figure out what file types use this exact format
 #[derive(Clone, Copy, PartialEq)]
 pub enum UniqueId {
-    /// Altium's old style UUID
+    /// Altium's old style string unique ID
     Simple([u8; 8]),
     /// UUID style, used by some newer files
     Uuid(Uuid),
@@ -156,14 +166,15 @@ pub fn str_from_utf8(buf: &[u8]) -> Result<&str, ErrorKind> {
     // str::from_utf8(buf).map_err(|e| ErrorKind::Utf8(e, String::from_utf8_lossy(buf).to_string()))
 }
 
+/// RGB color
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct Color {
+pub struct Rgb {
     pub r: u8,
     pub g: u8,
     pub b: u8,
 }
 
-impl Color {
+impl Rgb {
     pub fn to_hex(self) -> String {
         format!("#{:02x}{:02x}{:02x}", self.r, self.g, self.b)
     }
@@ -193,7 +204,7 @@ impl Color {
     }
 }
 
-impl FromUtf8<'_> for Color {
+impl FromUtf8<'_> for Rgb {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         const RMASK: u32 = 0x0000ff;
         const GMASK: u32 = 0x00ff00;
@@ -209,7 +220,7 @@ impl FromUtf8<'_> for Color {
 
 /// Rotation when only 4 values are allowed
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum Rotation {
+pub enum Rotation90 {
     #[default]
     R0 = 0,
     R90 = 1,
@@ -217,18 +228,18 @@ pub enum Rotation {
     R270 = 3,
 }
 
-impl Rotation {
+impl Rotation90 {
     pub fn as_int(self) -> i16 {
         match self {
-            Rotation::R0 => 0,
-            Rotation::R90 => 90,
-            Rotation::R180 => 180,
-            Rotation::R270 => 270,
+            Rotation90::R0 => 0,
+            Rotation90::R90 => 90,
+            Rotation90::R180 => 180,
+            Rotation90::R270 => 270,
         }
     }
 }
 
-impl FromUtf8<'_> for Rotation {
+impl FromUtf8<'_> for Rotation90 {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
         todo!("{}", String::from_utf8_lossy(buf))
     }
