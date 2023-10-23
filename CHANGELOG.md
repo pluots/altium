@@ -4,12 +4,11 @@
 
 ## [Unreleased] - ReleaseDate
 
-### Added
-
 ### Changed
 
-### Removed
-
+- Improve drawing traits
+- Update unit conversions and location parsing
+- Clarify documentation
 
 
 ## [0.1.0] - 2023-07-25

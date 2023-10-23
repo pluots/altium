@@ -16,7 +16,7 @@ various file types is listed below:
 | ------------------------ | ----------- | ---------- | ------- | ----- | ------------------------------------- |
 | Binary Schematic Library | .SchLib     | ✓          | Poorly  |       | Good                                  |
 | Binary PCB Library       | .PcbLib     |            |         |       |                                       |
-| Binary Schematic Doc     | .SchDoc     |            |         |       |                                       |
+| Binary Schematic Doc     | .SchDoc     | ✓          |         |       |                                       |
 | Binary PCB Doc           | .PcbDoc     |            |         |       |                                       |
 | Draftsman Doc            | .PcbDwf     |            |         |       |                                       |
 | PCB Project              | .PrjPcb     |            |         |       |                                       |
