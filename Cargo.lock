@@ -96,7 +96,8 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 [[package]]
 name = "cfb"
 version = "0.8.1"
-source = "git+https://github.com/mdsteele/rust-cfb.git?rev=5c5279d6#5c5279d66f84a98314dd77a7f3a9c3c544070bee"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3d9a1a046ad1c0410627f29da8dbdeee2c91fb046d0aed5381e5b558bcf3230"
 dependencies = [
  "byteorder",
  "fnv",
