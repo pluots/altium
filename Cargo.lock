@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "altium"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "altium-macros",
  "base64",
@@ -42,7 +42,7 @@ dependencies = [
 
 [[package]]
 name = "altium-macros"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "convert_case",
  "proc-macro2",

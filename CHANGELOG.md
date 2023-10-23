@@ -6,6 +6,16 @@
 
 ### Added
 
+### Changed
+
+### Removed
+
+
+
+## [0.2.0] - 2023-10-23
+
+### Added
+
 - Expose a public APIs for schematic records, `Draw`, `Canvas`, `Storage` and
   many others. This is all unstable but will allow for some testing.
 
@@ -25,5 +35,6 @@ Initial release. This includes:
 - Very pasic `.PrjPcb` support
 
 <!-- next-url -->
-[Unreleased]: https://github.com/pluots/altium/compare/altium-v0.1.0...HEAD
+[Unreleased]: https://github.com/pluots/altium/compare/altium-v0.2.0...HEAD
+[0.2.0]: https://github.com/pluots/altium/compare/altium-v0.1.0...altium-v0.2.0
 [0.1.0]: https://github.com/pluots/altium/compare/490216bd119f...altium-v0.1.0
