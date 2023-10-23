@@ -16,13 +16,14 @@
 
 // #![allow(unused)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::unreadable_literal)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::must_use_candidate)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::struct_excessive_bools)]
-#![allow(clippy::missing_panics_doc)]
 #![allow(clippy::new_without_default)]
+#![allow(clippy::struct_field_names)]
+#![allow(clippy::struct_excessive_bools)]
+#![allow(clippy::unreadable_literal)]
 
 mod common;
 mod logging;
