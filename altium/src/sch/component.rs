@@ -1,7 +1,7 @@
 //! Things related to the entire component
 
 use std::cmp::Ordering;
-use std::fs::File;
+use std::fs::OpenOptions;
 use std::io;
 use std::path::Path;
 use std::sync::Arc;
@@ -56,9 +56,10 @@ impl Component {
         draw.svg()
     }
 
-    /// Draw this component to a SVG and write it to a file
+    /// Draw this component to a SVG and write it to a file. Will create the file
+    /// if it does not exist.
     pub fn save_svg<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
-        let file = File::open(path)?;
+        let file = OpenOptions::new().write(true).create_new(true).open(path)?;
         svg::write(&file, &self.svg())
     }
 

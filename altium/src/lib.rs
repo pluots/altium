@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 //! Tools for to reading and writing files produced by Altium Designer.
 //!
 //! It is very early in development, so please expect surprises if you are using
@@ -50,9 +51,3 @@ pub use pcb::{PcbDoc, PcbLib};
 pub use prj::PrjPcb;
 #[doc(inline)]
 pub use sch::{SchDoc, SchLib};
-
-#[cfg(doctest)]
-mod readme_tests {
-    #[doc = include_str!("../../README.md")]
-    struct MainReadMe;
-}

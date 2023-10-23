@@ -4,3 +4,5 @@ test_output/
 .DS_Store
 __Previews/
 History/
+# demo output
+altium/*.svg
