@@ -14,6 +14,7 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 /// Our main error type is an error ([`ErrorKind`]) plus some context for what
 /// caused it, a quasi-backtrace.
+#[derive(Debug)]
 pub struct Error {
     kind: Box<ErrorKind>,
     trace: Vec<Frame>,
@@ -67,11 +68,13 @@ impl fmt::Display for Error {
     }
 }
 
-impl fmt::Debug for Error {
+impl fmt::Debug for Frame {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
+        self.inner.fmt(f)
     }
 }
+
+impl std::error::Error for Error {}
 
 /// A raw error without context. See [`Error`] for more information.
 #[derive(Debug)]
