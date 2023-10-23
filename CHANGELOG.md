@@ -4,14 +4,8 @@
 
 ## [Unreleased] - ReleaseDate
 
-### Added
-
-### Changed
-
 Implement std `Error` for `altium::Error`, as well as a better `Debug`
 implementation.
-
-### Removed
 
 
 
