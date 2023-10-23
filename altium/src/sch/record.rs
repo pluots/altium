@@ -66,14 +66,18 @@ use crate::error::{AddContext, TruncBuf};
 use crate::font::FontCollection;
 use crate::Error;
 use crate::{
-    common::Color,
+    common::Rgb,
     parse::{FromRecord, ParseUtf8},
     ErrorKind,
 };
 
-/// A schematic record may be any of the below items
+/// A representation of a record in a schematic library or document.
+///
+/// Altium represents schematic formats as a collection of records. Some have a visual
+/// representation whereas others are just metadata. Each variant represents a record
+/// type.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
-#[repr(u32)]
 pub enum SchRecord {
     Undefined,
     MetaData(Box<MetaData>),
@@ -173,12 +177,13 @@ pub fn parse_any_record(buf: &[u8]) -> Result<SchRecord, Error> {
 }
 
 /// Component metadata (AKA "Component")
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 1, use_box = true)]
 pub struct MetaData {
     all_pin_count: u32,
-    area_color: Color,
-    color: Color,
+    pub area_color: Rgb,
+    pub color: Rgb,
     current_part_id: u8,
     database_table_name: Box<str>,
     #[from_record(rename = b"ComponentDescription")]
@@ -203,46 +208,50 @@ pub struct MetaData {
     unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 3)]
 pub struct IeeeSymbol {
     is_not_accessible: bool,
-    location: Location,
+    pub location: Location,
     owner_index: u8,
     owner_part_id: i8,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 4)]
 pub struct Label {
-    color: Color,
+    pub color: Rgb,
     font_id: u16,
     index_in_sheet: i16,
     is_not_accessible: bool,
     is_mirrored: bool,
-    location: Location,
+    pub location: Location,
     owner_index: u8,
     owner_part_id: i8,
     text: Box<str>,
-    unique_id: UniqueId,
-    justification: Justification,
+    pub unique_id: UniqueId,
+    pub justification: Justification,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 5)]
 pub struct Bezier {
-    color: Color,
+    color: Rgb,
     index_in_sheet: i16,
     is_not_accessible: bool,
     line_width: u16,
     #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
-    locations: Vec<Location>,
+    pub locations: Vec<Location>,
     owner_index: u8,
     owner_part_id: i8,
     owner_part_display_mode: i8,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 6)]
 pub struct PolyLine {
@@ -251,47 +260,50 @@ pub struct PolyLine {
     is_not_accessible: bool,
     index_in_sheet: i16,
     line_width: u16,
-    color: Color,
+    pub color: Rgb,
     #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
-    locations: Vec<Location>,
-    unique_id: UniqueId,
+    pub locations: Vec<Location>,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 7)]
 pub struct Polygon {
-    area_color: Color,
-    color: Color,
+    pub area_color: Rgb,
+    pub color: Rgb,
     index_in_sheet: i16,
     is_not_accessible: bool,
     is_solid: bool,
     line_width: u16,
     #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
-    locations: Vec<Location>,
+    pub locations: Vec<Location>,
     owner_index: u8,
     owner_part_id: i8,
     owner_part_display_mode: i8,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 8)]
 pub struct Ellipse {
-    area_color: Color,
-    color: Color,
+    pub area_color: Rgb,
+    pub color: Rgb,
     index_in_sheet: i16,
     is_not_accessible: bool,
     is_solid: bool,
     line_width: u16,
-    location: Location,
+    pub location: Location,
     owner_index: u8,
     owner_part_id: i8,
     owner_part_display_mode: i8,
     radius: i32,
     secondary_radius: i32,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 9)]
 pub struct Piechart {
@@ -299,11 +311,12 @@ pub struct Piechart {
     owner_part_id: i8,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 10)]
 pub struct RectangleRounded {
-    area_color: Color,
-    color: Color,
+    pub area_color: Rgb,
+    pub color: Rgb,
     corner: Location,
     corner_x_radius: i32,
     corner_y_radius: i32,
@@ -316,9 +329,10 @@ pub struct RectangleRounded {
     owner_part_id: i8,
     owner_part_display_mode: i8,
     transparent: bool,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 11)]
 pub struct ElipticalArc {
@@ -334,10 +348,11 @@ pub struct ElipticalArc {
     line_width: i8,
     start_angle: f32,
     end_angle: f32,
-    color: Color,
-    unique_id: UniqueId,
+    pub color: Rgb,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 12)]
 pub struct Arc {
@@ -345,7 +360,7 @@ pub struct Arc {
     owner_part_id: i8,
     is_not_accessible: bool,
     index_in_sheet: i16,
-    location: Location,
+    pub location: Location,
     radius: i8,
     radius_frac: i32,
     secondary_radius: i8,
@@ -353,14 +368,15 @@ pub struct Arc {
     line_width: i8,
     start_angle: f32,
     end_angle: f32,
-    color: Color,
-    unique_id: UniqueId,
+    pub color: Rgb,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 13)]
 pub struct Line {
-    color: Color,
+    pub color: Rgb,
     corner_x: i32,
     corner_y: i32,
     index_in_sheet: i16,
@@ -373,29 +389,31 @@ pub struct Line {
     owner_index: u8,
     owner_part_id: i8,
     owner_part_display_mode: i8,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 14)]
 pub struct Rectangle {
-    area_color: Color,
-    color: Color,
+    pub area_color: Rgb,
+    pub color: Rgb,
     /// Top right corner
-    corner: Location,
+    pub corner: Location,
     index_in_sheet: i16,
     is_not_accessible: bool,
-    is_solid: bool,
+    pub is_solid: bool,
     line_width: u16,
     /// Bottom left corner
-    location: Location,
+    pub location: Location,
     owner_index: u8,
     owner_part_id: i8,
     owner_part_display_mode: i8,
-    transparent: bool,
-    unique_id: UniqueId,
+    pub transparent: bool,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 15)]
 pub struct SheetSymbol {
@@ -403,10 +421,10 @@ pub struct SheetSymbol {
     owner_part_id: i8,
     index_in_sheet: i16,
     line_width: u16,
-    color: Color,
-    area_color: Color,
+    pub color: Rgb,
+    pub area_color: Rgb,
     is_solid: bool,
-    location: Location,
+    pub location: Location,
     symbol_type: Box<str>,
     show_net_name: bool,
     x_size: i32,
@@ -414,29 +432,31 @@ pub struct SheetSymbol {
     orientation: i32,
     font_id: u16,
     text: Box<str>,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 16)]
 pub struct SheetEntry {
     owner_index: u8,
     owner_part_id: i8,
     index_in_sheet: i16,
-    text_color: Color,
-    area_color: Color,
+    pub text_color: Rgb,
+    pub area_color: Rgb,
     text_font_id: u16,
     text_style: Box<str>,
     name: Box<str>,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
     arrow_kind: Box<str>,
     distance_from_top: i32,
-    color: Color,
+    color: Rgb,
     #[from_record(rename = b"IOType")]
     io_type: i32,
     side: i32,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 17)]
 pub struct PowerPort {
@@ -446,35 +466,37 @@ pub struct PowerPort {
     index_in_sheet: i16,
     style: i16,
     show_net_name: bool,
-    location: Location,
+    pub location: Location,
     orientation: i32,
     font_id: u16,
     text: Box<str>,
-    unique_id: UniqueId,
-    color: Color,
+    pub unique_id: UniqueId,
+    pub color: Rgb,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 18)]
 pub struct Port {
     alignment: u16,
-    area_color: Color,
+    pub area_color: Rgb,
     border_width: i32,
-    color: Color,
+    pub color: Rgb,
     font_id: u16,
     height: i32,
     width: i32,
     index_in_sheet: i16,
     #[from_record(rename = b"IOType")]
     io_type: u16,
-    location: Location,
+    pub location: Location,
     name: Box<str>,
     owner_index: u8,
     owner_part_id: i8,
-    text_color: Color,
-    unique_id: UniqueId,
+    pub text_color: Rgb,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 22)]
 pub struct NoErc {
@@ -485,24 +507,26 @@ pub struct NoErc {
     symbol: Box<str>,
     is_active: bool,
     suppress_all: bool,
-    location: Location,
-    color: Color,
-    unique_id: UniqueId,
+    pub location: Location,
+    pub color: Rgb,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 25)]
 pub struct NetLabel {
     owner_index: u8,
     owner_part_id: i8,
     index_in_sheet: i16,
-    location: Location,
-    color: Color,
+    pub location: Location,
+    pub color: Rgb,
     font_id: u16,
     text: Box<str>,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 26)]
 pub struct Bus {
@@ -510,42 +534,45 @@ pub struct Bus {
     owner_part_id: i8,
     index_in_sheet: i16,
     line_width: u16,
-    color: Color,
+    pub color: Rgb,
     #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
-    locations: Vec<Location>,
-    unique_id: UniqueId,
+    pub locations: Vec<Location>,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 27)]
 pub struct Wire {
     owner_index: u8,
     owner_part_id: i8,
     line_width: u16,
-    color: Color,
+    pub color: Rgb,
     #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
-    locations: Vec<Location>,
+    pub locations: Vec<Location>,
     index_in_sheet: i16,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 28)]
 pub struct TextFrame {
     location: LocationFract,
     corner: LocationFract,
-    area_color: Color,
+    pub area_color: Rgb,
     owner_index: u8,
     owner_part_id: i8,
     font_id: u16,
     alignment: u16,
     word_wrap: bool,
-    text: Box<str>,
+    pub text: Box<str>,
     index_in_sheet: i16,
     clip_to_rect: bool,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 29)]
 pub struct Junction {
@@ -553,6 +580,7 @@ pub struct Junction {
     owner_part_id: i8,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 30)]
 pub struct Image {
@@ -560,16 +588,17 @@ pub struct Image {
     owner_part_id: i8,
     is_not_accessible: bool,
     index_in_sheet: i16,
-    location: Location,
-    corner: Location,
+    pub location: Location,
+    pub corner: Location,
     keep_aspect: bool,
     embed_image: bool,
     file_name: Box<str>,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
     corner_x_frac: i32,
     corner_y_frac: i32,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 31)]
 pub struct Sheet {
@@ -591,7 +620,7 @@ pub struct Sheet {
     pub(super) fonts: FontCollection,
     border_on: bool,
     sheet_number_space_size: i32,
-    area_color: Color,
+    pub area_color: Rgb,
     // FIXME: make this an enum
     #[from_record(rename = b"Display_Unit")]
     display_unit: u16,
@@ -603,48 +632,52 @@ pub struct Sheet {
     file_version_info: Box<str>,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 32)]
 pub struct SheetName {
     owner_index: u8,
     owner_part_id: i8,
     index_in_sheet: i16,
-    location: Location,
-    color: Color,
+    pub location: Location,
+    pub color: Rgb,
     font_id: u16,
-    text: Box<str>,
-    unique_id: UniqueId,
+    pub text: Box<str>,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 33)]
 pub struct FileName {
     owner_index: u8,
     owner_part_id: i8,
     index_in_sheet: i16,
-    location: Location,
-    color: Color,
+    pub location: Location,
+    pub color: Rgb,
     font_id: u16,
-    text: Box<str>,
-    unique_id: UniqueId,
+    pub text: Box<str>,
+    pub unique_id: UniqueId,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 34)]
 pub struct Designator {
     owner_index: u8,
     owner_part_id: i8,
-    location: Location,
-    color: Color,
+    pub location: Location,
+    pub color: Rgb,
     #[from_record(rename = b"FontID")]
     font_id: u16,
-    unique_id: UniqueId,
-    name: Box<str>,
+    pub unique_id: UniqueId,
+    pub name: Box<str>,
     index_in_sheet: i16,
-    text: Box<str>,
+    pub text: Box<str>,
     read_only_state: ReadOnlyState,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 37)]
 pub struct BusEntry {
@@ -652,6 +685,7 @@ pub struct BusEntry {
     owner_part_id: i8,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 39)]
 pub struct Template {
@@ -661,22 +695,24 @@ pub struct Template {
     file_name: Box<str>,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 41)]
 pub struct Parameter {
     owner_index: u8,
     owner_part_id: i8,
-    location: Location,
+    pub location: Location,
     index_in_sheet: i16,
-    color: Color,
+    pub color: Rgb,
     font_id: u16,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
     read_only_state: i8,
-    name: Box<str>,
+    pub name: Box<str>,
     is_hidden: bool,
-    text: Box<str>,
+    pub text: Box<str>,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 44)]
 pub struct ImplementationList {
@@ -685,6 +721,7 @@ pub struct ImplementationList {
 }
 
 /// Things like models, including footprints
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 45)]
 pub struct Implementation {
@@ -699,10 +736,11 @@ pub struct Implementation {
     is_current: bool,
     datalinks_locked: bool,
     database_datalinks_locked: bool,
-    unique_id: UniqueId,
+    pub unique_id: UniqueId,
     index_in_sheet: i16,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 46)]
 pub struct ImplementationChild1 {
@@ -710,6 +748,7 @@ pub struct ImplementationChild1 {
     owner_part_id: i8,
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, FromRecord)]
 #[from_record(id = 48)]
 pub struct ImplementationChild2 {

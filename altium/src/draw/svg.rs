@@ -6,7 +6,7 @@ use svg::node::{element as el, Text};
 use svg::Node;
 
 use super::{canvas, Canvas};
-use crate::common::{PosHoriz, PosVert, Rotation};
+use crate::common::{PosHoriz, PosVert, Rotation90};
 
 #[derive(Clone, Debug)]
 pub struct SvgCtx {
@@ -101,12 +101,13 @@ impl SvgCtx {
     }
 }
 
+impl crate::sealed::Sealed for SvgCtx {}
 impl Canvas for SvgCtx {
     #[allow(clippy::similar_names)]
     fn draw_text(&mut self, item: canvas::DrawText) {
         use PosHoriz::{Center, Left, Right};
         use PosVert::{Bottom, Middle, Top};
-        use Rotation::{R0, R180, R270, R90};
+        use Rotation90::{R0, R180, R270, R90};
 
         let cmt = svg::node::Comment::new(format!("{item:#?}"));
         self.add_node(cmt);

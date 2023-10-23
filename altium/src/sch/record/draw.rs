@@ -1,6 +1,6 @@
 //! How to draw records, components, etc
 
-use crate::common::{Color, Location, PosHoriz, PosVert, Rotation, Visibility};
+use crate::common::{Location, PosHoriz, PosVert, Rgb, Rotation90, Visibility};
 use crate::draw::canvas::DrawRectangle;
 use crate::draw::canvas::{Canvas, DrawLine, DrawText};
 use crate::draw::{Draw, DrawPolygon};
@@ -13,13 +13,15 @@ use crate::sch::storage::Storage;
 #[allow(unused)]
 const MAX_EMBED_SIZE: usize = 500_000;
 
+/// Context needed to draw most schematic items
 // FIXME: This context is super bad and weird with, like, triple indirection
 // (since the info comes from`Arc`s). We can fix it somehow but it's low
 // priority.
 #[derive(Debug)]
 pub struct SchDrawCtx<'a> {
-    pub fonts: &'a FontCollection,
-    pub storage: &'a Storage,
+    pub(crate) fonts: &'a FontCollection,
+    #[allow(dead_code)]
+    pub(crate) storage: &'a Storage,
 }
 
 impl Draw for record::SchRecord {
@@ -73,7 +75,7 @@ impl Draw for SchPin {
     fn draw<C: Canvas>(&self, canvas: &mut C, _ctx: &SchDrawCtx<'_>) {
         use PosHoriz::{Left, Right};
         use PosVert::{Bottom, Middle};
-        use Rotation::{R0, R180, R270, R90};
+        use Rotation90::{R0, R180, R270, R90};
 
         canvas.add_comment(format!("{self:#?}"));
 
@@ -83,7 +85,7 @@ impl Draw for SchPin {
         canvas.draw_line(DrawLine {
             start,
             end,
-            color: Color::black(),
+            color: Rgb::black(),
             width: 4,
             // ..Default::default()
         });
@@ -93,14 +95,14 @@ impl Draw for SchPin {
         canvas.draw_line(DrawLine {
             start: end.add_x(1),
             end: end.add_x(-1),
-            color: Color::white(),
+            color: Rgb::white(),
             width: 1,
         });
 
         canvas.draw_line(DrawLine {
             start: end.add_y(1),
             end: end.add_y(-1),
-            color: Color::white(),
+            color: Rgb::white(),
             width: 1,
         });
 

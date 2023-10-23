@@ -4,12 +4,17 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+- Expose a public APIs for schematic records, `Draw`, `Canvas`, `Storage` and
+  many others. This is all unstable but will allow for some testing.
+
 ### Changed
 
 - Improve drawing traits
 - Update unit conversions and location parsing
 - Clarify documentation
-
+- Allow `save_svg` to overwrite existing files
 
 ## [0.1.0] - 2023-07-25
 

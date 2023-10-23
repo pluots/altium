@@ -1,4 +1,4 @@
-# altium-rs
+# Altium file format library for Rust
 
 A tool to process Altium file types. Currently this tool is in alpha and only
 has minimal components fully functioning (so please expect breaking changes!).
@@ -28,11 +28,11 @@ various file types is listed below:
 See `altium/examples` for some sample usage. Example reading components in a
 schematic library:
 
-```rust,no_run
+```rust
 use altium::SchLib;
 
 fn main() {
-    let lib = SchLib::open("path/to/mylib.schlib").unwrap();
+    let lib = SchLib::open("tests/samples/schlib/simple.SchLib").unwrap();
 
     // List all librefs stored in this schematic library
     for meta in lib.component_meta() {
@@ -44,7 +44,7 @@ fn main() {
     }
 
     // Get a single component by libref
-    let mycomp = lib.get_component("Resistor - standard").unwrap();
+    let mycomp = lib.get_component("Resistor - Standard").unwrap();
 
     // Write that image to a SVG file. Note that output is pretty buggy still.
     mycomp.save_svg("resistor.svg").unwrap();

@@ -10,7 +10,7 @@ use std::{fmt, str};
 use cfb::CompoundFile;
 use section_keys::update_section_keys;
 
-use crate::common::{buf2lstr, split_altium_map, Color, UniqueId};
+use crate::common::{buf2lstr, split_altium_map, Rgb, UniqueId};
 use crate::error::{AddContext, ErrorKind};
 use crate::font::{Font, FontCollection};
 use crate::parse::ParseUtf8;
@@ -205,7 +205,7 @@ pub(crate) struct SchLibMeta {
     sheet_style: SheetStyle,
     border_on: bool,
     sheet_number_space_size: u16,
-    area_color: Color,
+    area_color: Rgb,
     snap_grid_on: bool,
     snap_grid_size: u16,
     visible_grid_on: bool,
