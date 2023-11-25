@@ -14,7 +14,7 @@ convert_case = "0.6.0"
 proc-macro2 = "1.0.69"
 quote = "1.0.33"
 regex = "1.10.2"
-syn = "2.0.38"
+syn = "2.0.39"
 # syn = { version = "2.0.22", features = ["extra-traits"] }
 
 [package.metadata.release]
