@@ -12,6 +12,7 @@ const KV_SEP: u8 = b'=';
 /// Common coordinate type
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Location {
+    // These are nonpublic because we might want to combine `Location` and `LocationFract`
     pub(crate) x: i32,
     pub(crate) y: i32,
 }
