@@ -11,11 +11,11 @@ use std::{
 
 use altium::{
     sch::{Component, SchRecord},
-    Location,
     SchDoc,
     SchLib,
 };
-use log::info;
+use egui::Vec2;
+use log::{info, trace};
 
 /// One entry per tab
 static GLOBAL_QUEUE: Mutex<GlobalQueue> = Mutex::new(GlobalQueue::new());
@@ -94,17 +94,33 @@ pub struct TabData {
 /// Scale and position of a view
 #[derive(Clone, Copy, Debug)]
 pub struct ViewState {
-    /// Zoom if applicable, 1.0 is base
+    /// Zoom if applicable, in m/px
     pub scale: f32,
     /// Center position
-    pub center: Location,
+    pub center: Vec2,
+}
+
+impl ViewState {
+    /// Apply a drag to this view state. Only do for a secondary (right) click.
+    pub fn update_dragged_by(&mut self, drag_delta: Vec2) {
+        self.center += drag_delta
+    }
+
+    /// Update with zoom or multitouch (trackpad). Requires a zoom delta separately
+    pub fn update_with_input_state(&mut self, istate: &egui::InputState) {
+        const SCALE_MIN: f32 = 1e-6; // 1 um per px
+        const SCALE_MAX: f32 = 10e-3; // 10 mm per px
+
+        self.scale = f32::clamp(self.scale / istate.zoom_delta(), SCALE_MIN, SCALE_MAX);
+        self.center += istate.scroll_delta;
+    }
 }
 
 impl Default for ViewState {
     fn default() -> Self {
         Self {
-            scale: 1.0,
-            center: Location::default(),
+            scale: 1e-4, // m/px
+            center: Vec2::default(),
         }
     }
 }
@@ -155,7 +171,7 @@ pub fn open_file_async(path: PathBuf) {
 /// Open a file and add it to the global context. Returns an error on failure, rather than
 /// pushing it.
 pub fn open_file_sync_err(path: PathBuf) -> Result<(), String> {
-    let mut file_ty = match &path.extension().map(OsStr::to_ascii_lowercase) {
+    let file_ty = match &path.extension().map(OsStr::to_ascii_lowercase) {
         Some(v) if v == "schlib" => Ok(FileTy::SchLib),
         Some(v) if v == "pcblib" => Ok(FileTy::PcbLib),
         Some(v) if v == "schdoc" => Ok(FileTy::SchDoc),
@@ -175,7 +191,7 @@ pub fn open_file_sync_err(path: PathBuf) -> Result<(), String> {
         GlobalQueue::push_tab(new_tab);
     }
 
-    info!("queue: {:?}", GLOBAL_QUEUE.lock().unwrap());
+    trace!("queue: {:?}", GLOBAL_QUEUE.lock().unwrap());
 
     HAS_FRESH_DATA.store(true, SeqCst);
     Ok(())

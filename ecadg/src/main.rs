@@ -6,7 +6,8 @@ use std::{error::Error, path::PathBuf};
 use ecadg::open_file_sync_err;
 
 #[cfg(debug_assertions)]
-const DEFAULT_LOG_LEVEL: &str = "debug";
+// const DEFAULT_LOG_LEVEL: &str = "debug";
+const DEFAULT_LOG_LEVEL: &str = "info";
 #[cfg(not(debug_assertions))]
 const DEFAULT_LOG_LEVEL: &str = "warn";
 

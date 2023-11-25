@@ -1,24 +1,19 @@
 use std::{path::PathBuf, sync::atomic::Ordering::SeqCst};
 
-use egui::{ScrollArea, TextStyle, Ui};
-use egui_plot::Plot;
+use egui::{ScrollArea, TextStyle, Ui, Vec2};
 use log::debug;
-use regex::Regex;
 
-use crate::graphics;
-use crate::{
-    backend::{
-        open_file_async,
-        GlobalQueue,
-        SchDocTab,
-        SchLibTab,
-        TabData,
-        TabDataInner,
-        ViewState,
-        HAS_FRESH_DATA,
-    },
-    draw::PlotUiWrapper,
+use crate::backend::{
+    open_file_async,
+    GlobalQueue,
+    SchDocTab,
+    SchLibTab,
+    TabData,
+    TabDataInner,
+    ViewState,
+    HAS_FRESH_DATA,
 };
+use crate::gfx;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
@@ -56,7 +51,7 @@ impl GuiApp {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
 
-        graphics::init(cc);
+        gfx::init_graphics(cc);
 
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
@@ -77,7 +72,7 @@ impl eframe::App for GuiApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     #[allow(clippy::too_many_lines)]
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if HAS_FRESH_DATA.load(SeqCst) {
             // If there is fresh data, grab it
             GlobalQueue::drain(&mut self.tabs, &mut self.recent_files, &mut self.errors);
@@ -198,56 +193,69 @@ fn make_left_panel_schlib(ui: &mut Ui, tab: &mut SchLibTab) {
     );
 }
 
+#[allow(unused)]
 #[allow(clippy::needless_pass_by_ref_mut)]
 fn make_left_panel_schdoc(ui: &Ui, tab: &mut SchDocTab) {}
 
+/// The central main content panel the region left after adding TopPanel's and SidePanel's
 #[allow(clippy::needless_pass_by_ref_mut)]
 fn make_center_panel(app: &mut GuiApp, ui: &mut Ui) {
-    // The central panel the region left after adding TopPanel's and SidePanel's
-
+    // tab row
     ui.horizontal(|ui| {
         for (idx, tab) in app.tabs.iter().enumerate() {
             ui.selectable_value(&mut app.active_tab, Some(idx), &*tab.title);
         }
     });
 
+    // main content
+    let (rect, response) = ui.allocate_at_least(ui.available_size(), egui::Sense::click_and_drag());
     let Some(tab_idx) = app.active_tab else {
         return;
     };
 
     let tabdata = &mut app.tabs[tab_idx];
 
+    let hovered = response.hovered();
+    // let hovered = ui.input(|istate| {
+    //     istate
+    //         .pointer
+    //         .latest_pos()
+    //         .is_some_and(|pos| response.rect.contains(pos))
+    // });
+    let view_state = &mut tabdata.view_state;
+    if hovered {
+        view_state.update_dragged_by(response.drag_delta());
+        ui.input(|istate| view_state.update_with_input_state(istate));
+    }
+
+    #[cfg(feature = "_debug")]
+    ui.label(format!("view_state: {view_state:?}, hovered: {hovered}",));
+
     match &mut tabdata.inner {
-        TabDataInner::SchLib(tab) => make_center_panel_schlib(ui, tab, tabdata.view_state),
-        TabDataInner::SchDoc(tab) => make_center_panel_schdoc(ui, tab, tabdata.view_state),
+        TabDataInner::SchLib(tab) => make_center_panel_schlib(ui, rect, tab, view_state),
+        TabDataInner::SchDoc(tab) => make_center_panel_schdoc(ui, rect, tab, view_state),
     }
 }
 
 #[allow(clippy::needless_pass_by_ref_mut)]
-fn make_center_panel_schlib(ui: &mut Ui, tab: &mut SchLibTab, vs: ViewState) {
+fn make_center_panel_schlib(ui: &mut Ui, rect: egui::Rect, tab: &SchLibTab, vs: &ViewState) {
     let comp = &tab.components[tab.active_component];
+    let dims = Vec2 {
+        x: rect.width(),
+        y: rect.height(),
+    };
+    ui.label(format!("rect: {rect:?}, dims: {dims:?}"));
     egui::Frame::canvas(ui.style()).show(ui, |ui| {
-        crate::graphics::paint_schlib_component(ui, comp, vs)
+        ui.painter()
+            .add(crate::gfx::SchLibCallback::callback(rect, comp, vs, dims))
     });
-
-    // let plot = default_plot();
-    // let _resp = plot.show(ui, |plot_ui| {
-    //     comp.draw(&mut PlotUiWrapper(plot_ui));
-    // });
 }
 
 #[allow(clippy::needless_pass_by_ref_mut)]
-fn make_center_panel_schdoc(ui: &mut Ui, tab: &mut SchDocTab, vs: ViewState) {
-    // let plot = default_plot();
-    // let _resp = plot.show(ui, |plot_ui| {
-    //     tab.records.draw(&mut PlotUiWrapper(plot_ui));
-    // });
-}
-
-fn default_plot() -> Plot {
-    Plot::new("main_plot")
-        .allow_zoom(true)
-        .data_aspect(1.0)
-        .show_x(false)
-        .show_y(false)
+fn make_center_panel_schdoc(
+    _ui: &mut Ui,
+    _rect: egui::Rect,
+    _tab: &mut SchDocTab,
+    _vs: &mut ViewState,
+) {
 }

@@ -11,12 +11,9 @@ use altium::draw::{
     PosVert,
     Rgb,
 };
-use altium::sch::Component;
 use eframe::egui;
-use egui::{Align2, Color32, PaintCallbackInfo, RichText, Stroke};
+use egui::{Align2, Color32, RichText, Stroke};
 use egui_plot::{Line, PlotPoint, PlotPoints, PlotUi, Polygon, Text};
-
-use crate::backend::ViewState;
 
 #[repr(transparent)]
 pub struct PlotUiWrapper<'a>(pub &'a mut PlotUi);
@@ -97,7 +94,7 @@ impl Canvas for PlotUiWrapper<'_> {
         self.polygon(poly);
     }
 
-    fn draw_image(&mut self, item: DrawImage) {
+    fn draw_image(&mut self, _item: DrawImage) {
         // todo!()
     }
 }

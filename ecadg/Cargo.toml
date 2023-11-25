@@ -16,6 +16,7 @@ serde = "1.0.193"
 rfd = "0.12.1"
 regex = "1.10.2"
 bytemuck = "1.14.0"
+lyon = "1.0.1"
 
 [dependencies.eframe]
 version = "0.24.0"
@@ -27,6 +28,10 @@ features = [
     "wgpu",
     "persistence",     # Enable restoring app state when restarting the app.
 ]
+
+[features]
+default = ["_debug"]
+_debug = []
 
 # native
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
