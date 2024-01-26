@@ -23,7 +23,10 @@ pub fn parse_int(sec: &Properties, key: &str) -> i32 {
 
 /// Parse a boolean value
 pub fn parse_bool(sec: &Properties, key: &str) -> bool {
-    sec.get(key).map(|v| v == "1").unwrap_or_default()
+    match sec.get(key) {
+        Some("1") => true,
+        None | Some(_) => false,
+    }
 }
 
 /// Extract a `UniqueId` from a buffer
