@@ -5,6 +5,7 @@ edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/pluots/altium"
 description = "A library for processing Altium file types"
+rust-version = "1.71"
 
 [dependencies]
 altium-macros = { path = "../altium-macros", version = "0.2.1" }
