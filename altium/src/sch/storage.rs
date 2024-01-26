@@ -58,10 +58,7 @@ impl Storage {
 
     /// Get the data with a certain path name if available
     pub fn try_get_data(&self, path: &str) -> Option<Result<Arc<[u8]>, Error>> {
-        let Some(mtx) = self.0.get(path) else {
-            return None;
-        };
-
+        let mtx = self.0.get(path)?;
         let data_res = (*mtx.lock().unwrap()).uncompressed();
 
         Some(data_res.or_context(|| format!("accessing data for '{path}'")))

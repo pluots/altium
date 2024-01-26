@@ -15,15 +15,18 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 /// Our main error type is an error ([`ErrorKind`]) plus some context for what
 /// caused it, a quasi-backtrace.
 #[derive(Debug)]
-pub struct Error {
-    kind: Box<ErrorKind>,
+pub struct Error(Box<ErrorInner>);
+
+#[derive(Debug)]
+struct ErrorInner {
+    kind: ErrorKind,
     trace: Vec<Frame>,
 }
 
 impl Error {
     /// The original error that caused this problem
     pub fn kind(&self) -> &ErrorKind {
-        &self.kind
+        &self.0.kind
     }
 
     /// A trace of where this error came from.
@@ -31,7 +34,14 @@ impl Error {
     /// This is a library trace rather than a full frame stacktrace, but it is
     /// useful for debugging.
     pub fn trace(&self) -> &[Frame] {
-        &self.trace
+        &self.0.trace
+    }
+
+    fn new(kind: ErrorKind) -> Self {
+        Self(Box::new(ErrorInner {
+            kind,
+            trace: Vec::new(),
+        }))
     }
 }
 
@@ -53,12 +63,12 @@ impl Frame {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.kind.fmt(f)?;
+        self.kind().fmt(f)?;
 
-        if !self.trace.is_empty() {
+        if !self.trace().is_empty() {
             f.write_str(". context:")?;
 
-            for (idx, frame) in self.trace.iter().enumerate() {
+            for (idx, frame) in self.trace().iter().enumerate() {
                 write!(f, "\n  {idx:2}: {}", frame.description())?;
             }
             f.write_str("\n")?;
@@ -173,18 +183,18 @@ impl ErrorKind {
     }
 }
 
-impl From<ini::ParseError> for ErrorKind {
-    fn from(value: ini::ParseError) -> Self {
-        Self::IniFormat(value)
+impl<E> From<E> for Error
+where
+    ErrorKind: From<E>,
+{
+    fn from(value: E) -> Self {
+        Self::new(value.into())
     }
 }
 
-impl From<ini::ParseError> for Error {
+impl From<ini::ParseError> for ErrorKind {
     fn from(value: ini::ParseError) -> Self {
-        Self {
-            kind: ErrorKind::from(value).into(),
-            trace: Vec::new(),
-        }
+        Self::IniFormat(value)
     }
 }
 
@@ -197,45 +207,15 @@ impl From<ini::Error> for ErrorKind {
     }
 }
 
-impl From<ini::Error> for Error {
-    fn from(value: ini::Error) -> Self {
-        Self {
-            kind: ErrorKind::from(value).into(),
-            trace: Vec::new(),
-        }
-    }
-}
-
 impl From<io::Error> for ErrorKind {
     fn from(value: io::Error) -> Self {
         ErrorKind::Io(value)
     }
 }
 
-impl From<io::Error> for Error {
-    fn from(value: io::Error) -> Self {
-        Self {
-            kind: Box::new(value.into()),
-            trace: Vec::new(),
-        }
-    }
-}
-
-impl From<ErrorKind> for Error {
-    fn from(value: ErrorKind) -> Self {
-        Self {
-            kind: Box::new(value),
-            trace: Vec::new(),
-        }
-    }
-}
-
-impl From<PinError> for Error {
+impl From<PinError> for ErrorKind {
     fn from(value: PinError) -> Self {
-        Error {
-            kind: Box::new(ErrorKind::Pin(value)),
-            trace: Vec::new(),
-        }
+        Self::Pin(value)
     }
 }
 
@@ -245,7 +225,7 @@ impl From<image::ImageError> for ErrorKind {
     }
 }
 
-/// This trait lets us throw random context on errors and make them brand new
+/// This trait lets us add context to errors and create a quasi-backtrace
 pub(crate) trait AddContext: Sized {
     type WithContext;
 
@@ -266,7 +246,7 @@ impl AddContext for Error {
     type WithContext = Self;
 
     fn context<C: Into<Box<str>>>(mut self, ctx: C) -> Self::WithContext {
-        self.trace.push(Frame::new(ctx.into()));
+        self.0.trace.push(Frame::new(ctx.into()));
         self
     }
 }
@@ -276,7 +256,7 @@ impl<T> AddContext for Result<T, Error> {
 
     fn context<C: Into<Box<str>>>(self, ctx: C) -> Self::WithContext {
         self.map_err(|mut e| {
-            e.trace.push(Frame::new(ctx));
+            e.0.trace.push(Frame::new(ctx));
             e
         })
     }
@@ -287,10 +267,10 @@ impl AddContext for ErrorKind {
 
     /// Convert `ErrorKind` to Error
     fn context<C: Into<Box<str>>>(self, ctx: C) -> Self::WithContext {
-        Error {
-            kind: Box::new(self),
+        Error(Box::new(ErrorInner {
+            kind: self,
             trace: vec![Frame::new(ctx)],
-        }
+        }))
     }
 }
 
@@ -299,14 +279,16 @@ impl<T> AddContext for Result<T, ErrorKind> {
 
     /// Convert `ErrorKind` to Error
     fn context<C: Into<Box<str>>>(self, ctx: C) -> Self::WithContext {
-        self.map_err(|e| Error {
-            kind: Box::new(e),
-            trace: vec![Frame::new(ctx)],
+        self.map_err(|kind| {
+            Error(Box::new(ErrorInner {
+                kind,
+                trace: vec![Frame::new(ctx)],
+            }))
         })
     }
 }
 
-/// A subslice of a buffer for nicer error messages
+/// A subslice of a buffer for error messages that only display part of a trace.
 #[doc(hidden)]
 #[derive(Clone, Debug)]
 pub struct TruncBuf<T> {
