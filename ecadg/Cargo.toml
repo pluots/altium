@@ -7,19 +7,19 @@ edition = "2021"
 
 [dependencies]
 altium = { path = "../altium", version = "0.2.1", features = ["_sealed"] }
-egui = "0.24.0"
-egui_dock = "0.9.0"
-egui_extras = "0.24.0"
-egui_plot = "0.24.0"
-log = "0.4.20"
-serde = "1.0.193"
+egui = "0.24.1"
+egui_dock = "0.9.1"
+egui_extras = "0.24.2"
+egui_plot = "0.24.2"
+log = "0.4.21"
+serde = "1.0.198"
 rfd = "0.12.1"
-regex = "1.10.2"
-bytemuck = "1.14.0"
+regex = "1.10.4"
+bytemuck = "1.15.0"
 lyon = "1.0.1"
 
 [dependencies.eframe]
-version = "0.24.0"
+version = "0.24.1"
 default-features = false
 features = [
     "accesskit",     # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
