@@ -147,7 +147,7 @@ impl Canvas for SvgCtx {
         self.x_coord(ymin, ymax - ymin);
 
         let txtnode = Text::new(item.text);
-        let mut node = el::Text::new()
+        let mut node = el::Text::new("foo")
             .set("x", self.x_coord(x, width))
             .set("y", self.y_coord(y, height))
             .set("text-anchor", anchor)

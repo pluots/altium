@@ -112,7 +112,7 @@ impl ViewState {
         const SCALE_MAX: f32 = 10e-3; // 10 mm per px
 
         self.scale = f32::clamp(self.scale / istate.zoom_delta(), SCALE_MIN, SCALE_MAX);
-        self.center += istate.scroll_delta;
+        self.center += istate.raw_scroll_delta;
     }
 }
 

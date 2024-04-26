@@ -70,6 +70,7 @@ impl egui_wgpu::CallbackTrait for SchLibCallback {
         &self,
         _device: &Device,
         queue: &Queue,
+        _desc: &egui_wgpu::ScreenDescriptor,
         _encoder: &mut CommandEncoder,
         resources: &mut CallbackResources,
     ) -> Vec<CommandBuffer> {
