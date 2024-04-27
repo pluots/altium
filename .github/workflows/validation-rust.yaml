@@ -61,7 +61,10 @@ jobs:
           key: ${{ matrix.os }}
       - run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev
         if: matrix.build == 'linux'
-      - run: cargo llvm-cov nextest --no-fail-fast --lcov --output-path lcov.info
+        # Only run coverage on the `altium` package until
+        # <https://github.com/Smithay/wayland-rs/issues/717> gets fixed
+      - run: cargo llvm-cov nextest --no-fail-fast --lcov --output-path lcov.info --package altium
+      - run: cargo nextest run
       - run: cargo test --doc
       - name: Upload coverage data to codecov
         uses: codecov/codecov-action@v3
