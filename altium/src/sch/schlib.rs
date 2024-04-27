@@ -199,7 +199,6 @@ pub(crate) struct SchLibMeta {
     /// This is an `Arc` because we want other types to have an easy way to
     /// share this information.
     fonts: Arc<FontCollection>,
-    ///
     use_mbcs: bool,
     is_boc: bool,
     sheet_style: SheetStyle,

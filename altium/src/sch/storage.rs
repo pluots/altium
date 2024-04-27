@@ -157,10 +157,7 @@ impl CompressedData {
             .filter(|px| px[0] == 255 && px[1] == 255 && px[2] == 255)
             .for_each(|px| px[3] = 0);
 
-        img.write_to(
-            &mut Cursor::new(&mut tmp_buf),
-            image::ImageOutputFormat::Png,
-        )?;
+        img.write_to(&mut Cursor::new(&mut tmp_buf), image::ImageFormat::Png)?;
 
         let arc: Arc<[u8]> = tmp_buf.into();
         *self = Self::Expanded(Arc::clone(&arc));

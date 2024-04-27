@@ -5,29 +5,33 @@ edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/pluots/altium"
 description = "A library for processing Altium file types"
-rust-version = "1.71"
+# Selected to use `slice_first_last_chunk`
+rust-version = "1.77"
 
 [dependencies]
 altium-macros = { path = "../altium-macros", version = "0.2.1" }
-base64 = "0.21.7"
-cfb = "0.9.0"
+base64 = "0.22.0"
+cfb = "0.10.0"
 flate2 = "1.0.28"
 # image = "0.24.6"
-image = { version = "0.24.8", default-features = false, features = ["png", "bmp", "jpeg"] }
+image = { version = "0.25.1", default-features = false, features = ["png", "bmp", "jpeg"] }
 lazy_static = "1.4.0"
-log = "0.4.20"
+log = "0.4.21"
 num_enum = "0.7.2"
 quick-xml = "0.31.0"
-regex = "1.10.3"
-rust-ini = "0.20.0"
-serde = "1.0.195"
+regex = "1.10.4"
+rust-ini = "0.21.0"
+serde = "1.0.198"
 serde-xml-rs = "0.6.0"
-svg = "0.14.0"
-uuid = { version = "1.7.0", features = ["v1", "v4", "fast-rng"]}
-xml-rs = "0.8.19"
+svg = "0.17.0"
+uuid = { version = "1.8.0", features = ["v1", "v4", "fast-rng"]}
+xml-rs = "0.8.20"
 
 [dev-dependencies]
-env_logger = "0.11.0"
+env_logger = "0.11.3"
+
+[features]
+_sealed = []
 
 [package.metadata.release]
 shared-version = true
