@@ -1,7 +1,7 @@
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_possible_truncation)]
 
-use std::mem;
+use std::mem::{self};
 
 use bytemuck::{Pod, Zeroable};
 use eframe::egui_wgpu::{self, wgpu, RenderState};
@@ -9,7 +9,21 @@ use egui::Vec2;
 use egui_wgpu::wgpu::{Device, Queue, RenderPass};
 use wgpu::util::DeviceExt;
 
-const GRID_INDICES: usize = 4;
+use crate::backend::ViewState;
+
+/// spacing for major grid in m. 10mm currently
+const MAJOR_SPACING_M: f32 = 10e-3;
+const MAJOR_SPACING_MULT: f32 = 1.0;
+/// Size of minor grid compared to major grid. 1mm currently.
+const MINOR_SPACING_MULT: f32 = 0.1;
+
+/// Saturation of major gridlines
+const MAJOR_SATURATION: f32 = 1.0;
+/// Saturation of minor gridlines
+const MINOR_SATURATION: f32 = 0.4;
+
+/// Total number of times we run the grid shader
+const GRID_INSTANCES: usize = 4;
 
 /// Data of window position used to determine layout
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
@@ -36,6 +50,7 @@ impl Default for GridUniformBuf {
 pub struct GridInstanceBuf {
     /// Multiplier of spacing to make major and minor grids
     spacing_mult: f32,
+    /// Unused
     saturation: f32,
     /// 0 for horizontal, 1 for vertical
     is_vert: u32,
@@ -48,36 +63,30 @@ impl GridInstanceBuf {
     // const MAJOR_HORIZ_IDX: u8 = 2;
     // const MAJOR_VERT_IDX: u8 = 3;
 
-    const MAJOR_SPACING_MULT: f32 = 1.0;
-    const MINOR_SPACING_MULT: f32 = 0.1;
-
     /// Horizontal & vertical for major and minor
-    fn all() -> [Self; GRID_INDICES] {
-        const MAJOR_SATURATION: f32 = 1.0;
-        const MINOR_SATURATION: f32 = 0.4;
-
+    fn all() -> [Self; GRID_INSTANCES] {
         // First two are minor, second two are major. We do this so major overwrites minor
         [
             Self {
-                spacing_mult: Self::MINOR_SPACING_MULT,
+                spacing_mult: MINOR_SPACING_MULT,
                 saturation: MINOR_SATURATION,
                 is_vert: 0,
                 _padding: Default::default(),
             },
             Self {
-                spacing_mult: Self::MINOR_SPACING_MULT,
+                spacing_mult: MINOR_SPACING_MULT,
                 saturation: MINOR_SATURATION,
                 is_vert: 1,
                 _padding: Default::default(),
             },
             Self {
-                spacing_mult: Self::MAJOR_SPACING_MULT,
+                spacing_mult: MAJOR_SPACING_MULT,
                 saturation: MAJOR_SATURATION,
                 is_vert: 0,
                 _padding: Default::default(),
             },
             Self {
-                spacing_mult: Self::MAJOR_SPACING_MULT,
+                spacing_mult: MAJOR_SPACING_MULT,
                 saturation: MAJOR_SATURATION,
                 is_vert: 1,
                 _padding: Default::default(),
@@ -218,21 +227,22 @@ impl GridCtx {
 
     /// Set up buffers to be ready to draw
     /// scale is m/px, center is in px
-    pub fn prepare(&mut self, queue: &Queue, window_dims: Vec2, scale: f32, center: Vec2) {
-        /// spacing for major grid in m. 10mm currently
-        const MAJOR_SPACING_M: f32 = 10e-3;
+    pub fn prepare(&mut self, queue: &Queue, vs: ViewState) {
+        let window_dims = vs.rect.size();
+        let offset = vs.offset;
+
         // spacing in pixels
-        let sp_px = MAJOR_SPACING_M / scale;
+        let sp_px = MAJOR_SPACING_M / vs.scale;
 
         // spacing as percent
         // TODO: find out why these need to be reversed to get accurate results, I have no clue
         let sp_pct_x = sp_px / window_dims.y;
         let sp_pct_y = sp_px / window_dims.x;
 
-        let offset_pct_x = (center.x / window_dims.x) % sp_pct_x;
-        let offset_pct_y = (center.y / window_dims.y) % sp_pct_y;
+        let offset_pct_x = (offset.x / window_dims.x) % sp_pct_x;
+        let offset_pct_y = (offset.y / window_dims.y) % sp_pct_y;
 
-        dbg!(offset_pct_x, sp_pct_x, offset_pct_y, sp_pct_y);
+        // dbg!(offset_pct_x, sp_pct_x, offset_pct_y, sp_pct_y);
 
         let uniform = GridUniformBuf {
             offset_mod_pct: Vec2 {
@@ -252,18 +262,20 @@ impl GridCtx {
     }
 
     /// Draw needed lines
-    pub fn paint<'a>(&'a self, render_pass: &mut RenderPass<'a>, scale: f32) {
+    pub fn paint<'a>(&'a self, render_pass: &mut RenderPass<'a>, vs: ViewState) {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.instance_buffer.slice(..));
 
+        let scale = vs.scale;
+
         if scale < 2e-3 {
             if scale < 200e-6 {
                 // drawing minor
-                let x_lines = (2.0 / self.uniform_buffer_data.spacing_pct.x).ceil()
-                    / GridInstanceBuf::MINOR_SPACING_MULT;
-                let y_lines = (2.0 / self.uniform_buffer_data.spacing_pct.y).ceil()
-                    / GridInstanceBuf::MINOR_SPACING_MULT;
+                let x_lines =
+                    (2.0 / self.uniform_buffer_data.spacing_pct.x).ceil() / MINOR_SPACING_MULT;
+                let y_lines =
+                    (2.0 / self.uniform_buffer_data.spacing_pct.y).ceil() / MINOR_SPACING_MULT;
                 debug_assert!(x_lines > 0.0);
                 debug_assert!(y_lines > 0.0);
 
@@ -272,10 +284,10 @@ impl GridCtx {
             }
 
             // drawing major
-            let x_lines = (2.0 / self.uniform_buffer_data.spacing_pct.x).ceil()
-                / GridInstanceBuf::MAJOR_SPACING_MULT;
-            let y_lines = (2.0 / self.uniform_buffer_data.spacing_pct.y).ceil()
-                / GridInstanceBuf::MAJOR_SPACING_MULT;
+            let x_lines =
+                (2.0 / self.uniform_buffer_data.spacing_pct.x).ceil() / MAJOR_SPACING_MULT;
+            let y_lines =
+                (2.0 / self.uniform_buffer_data.spacing_pct.y).ceil() / MAJOR_SPACING_MULT;
 
             debug_assert!(x_lines > 0.0);
             debug_assert!(y_lines > 0.0);

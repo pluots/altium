@@ -7,7 +7,7 @@ use altium_macros::FromRecord;
 use log::warn;
 
 use super::SchRecord;
-use crate::common::{i32_mils_to_nm, u32_mils_to_nm, Location, Rotation90, Visibility};
+use crate::common::{mils_to_nm, Location, Rotation90, Visibility};
 use crate::error::AddContext;
 use crate::parse::ParseUtf8;
 use crate::parse::{FromRecord, FromUtf8};
@@ -45,20 +45,21 @@ pub struct SchPin {
 impl SchPin {
     pub(crate) fn parse(buf: &[u8]) -> Result<SchRecord> {
         // 6 bytes unknown
-        let [_, _, _, _, _, _, rest @ ..] = buf else {
-            return Err(PinError::TooShort(buf.len(), "initial group").into());
-        };
+        let (_unknown, rest) = buf
+            .split_first_chunk::<6>()
+            .ok_or(PinError::TooShort(buf.len(), "initial group"))?;
+
         // 6 more bytes unknown - symbols
-        let [_, _, _, _, _, _, rest @ ..] = rest else {
-            return Err(PinError::TooShort(rest.len(), "second group").into());
-        };
+        let (_unknown, rest) = rest
+            .split_first_chunk::<6>()
+            .ok_or(PinError::TooShort(rest.len(), "second group"))?;
 
         let (description, rest) = sized_buf_to_utf8(rest, "description")?;
 
         // TODO: ty_info
-        let [formal_type, _ty_info, rot_hide, l0, l1, x0, x1, y0, y1, rest @ ..] = rest else {
-            return Err(PinError::TooShort(rest.len(), "position extraction").into());
-        };
+        let ([formal_type, _ty_info, rot_hide, l0, l1, x0, x1, y0, y1], rest) = rest
+            .split_first_chunk()
+            .ok_or(PinError::TooShort(rest.len(), "position extraction"))?;
 
         assert_eq!(
             *formal_type, 1,
@@ -69,9 +70,9 @@ impl SchPin {
         let location_x = i16::from_le_bytes([*x0, *x1]);
         let location_y = i16::from_le_bytes([*y0, *y1]);
 
-        let [_, _, _, _, rest @ ..] = rest else {
-            return Err(PinError::TooShort(rest.len(), "remaining buffer").into());
-        };
+        let (_unknown, rest) = rest
+            .split_first_chunk::<4>()
+            .ok_or(PinError::TooShort(rest.len(), "remaining buffer"))?;
 
         let (name, rest) = sized_buf_to_utf8(rest, "name")?;
         let (designator, rest) = sized_buf_to_utf8(rest, "designator")?;
@@ -81,8 +82,8 @@ impl SchPin {
         }
 
         let location = Location {
-            x: i32_mils_to_nm(i32::from(location_x))?,
-            y: i32_mils_to_nm(i32::from(location_y))?,
+            x: mils_to_nm(i32::from(location_x))?,
+            y: mils_to_nm(i32::from(location_y))?,
         };
         let retval = Self {
             formal_type: *formal_type,
@@ -92,7 +93,7 @@ impl SchPin {
             designator: designator.into(),
             name: name.into(),
             location,
-            length: u32_mils_to_nm(u32::from(length))?,
+            length: mils_to_nm(u32::from(length))?,
             // location_x: i32::from(location_x) * 10,
             // location_y: i32::from(location_y) * 10,
             // length: u32::from(length) * 10,

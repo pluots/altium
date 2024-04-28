@@ -6,7 +6,7 @@ use convert_case::{Case, Casing};
 use proc_macro::TokenStream;
 use proc_macro2::{Delimiter, Ident, Literal, Span, TokenStream as TokenStream2, TokenTree};
 use quote::{quote, ToTokens};
-use syn::{parse2, Attribute, Data, DeriveInput, Meta, Type};
+use syn::{parse2, Attribute, Data, DeriveInput, Field, Meta, Type};
 
 /// Derive `FromRecord` for a type. See that trait for better information.
 ///
@@ -69,100 +69,7 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
 
     // Loop through each field in the struct
     for field in data.fields {
-        let Type::Path(path) = field.ty else {
-            panic!("invalid type")
-        };
-
-        let field_ident = field.ident.unwrap();
-
-        // Parse attributes that exist on the field
-        let mut field_attr_map = parse_attrs(field.attrs).unwrap_or_default();
-
-        // Check if we need to parse an array
-        if let Some(arr_val) = field_attr_map.remove("array") {
-            let arr_val_str = arr_val.to_string();
-            if arr_val_str == "true" {
-                let count_ident = field_attr_map
-                    .remove("count")
-                    .expect("missing 'count' attribute");
-
-                let arr_map = field_attr_map
-                    .remove("map")
-                    .expect("missing 'map' attribute");
-
-                process_array(
-                    &struct_ident,
-                    &field_ident,
-                    count_ident,
-                    arr_map,
-                    &mut match_arms,
-                );
-                error_if_map_not_empty(&field_attr_map);
-                continue;
-            } else if arr_val_str != "false" {
-                panic!("array must be `true` or `false` but got {arr_val_str}");
-            }
-        }
-
-        // We match a single literal, like `OwnerPartId`
-        // Perform renaming if attribute requests it
-        let match_pat = match field_attr_map.remove("rename") {
-            Some(TokenTree::Literal(v)) => v,
-            Some(v) => panic!("expected literal, got {v:?}"),
-            None => create_key_name(&field_ident),
-        };
-
-        // If we haven't consumed all attributes, yell
-        error_if_map_not_empty(&field_attr_map);
-
-        let update_stmt = if path.path.segments.first().unwrap().ident == "Option" {
-            // Wrap our field is an `Option<T>`
-            quote! { ret.#field_ident = Some(parsed); }
-        } else {
-            quote! { ret.#field_ident = parsed; }
-        };
-
-        let path_str = path.to_token_stream().to_string();
-
-        // Types `Location` and `LocationFract` are special cases
-        let is_location_fract = path_str.contains("LocationFract");
-        if is_location_fract || path_str.contains("Location") {
-            process_location(
-                &struct_ident,
-                &field_ident,
-                is_location_fract,
-                &mut match_arms,
-            );
-            continue;
-        }
-
-        let Utf8Handler {
-            arm: utf8_arm,
-            define_flag: utf8_def_flag,
-            check_flag: utf8_check_flag,
-        } = if path_str.contains("String") || path_str.contains("str") {
-            // Altium does this weird thing where it will create a normal key and a key
-            // with `%UTF8%` if a value is utf8. We need to discard those redundant values
-            make_utf8_handler(&match_pat, &field_ident, &struct_ident, &update_stmt)
-        } else {
-            Utf8Handler::default()
-        };
-
-        let ctx_msg = make_ctx_message(&match_pat, &field_ident, &struct_ident);
-
-        let quoted = quote! {
-            #utf8_arm
-
-            #match_pat => {
-                #utf8_check_flag
-
-                let parsed = val.parse_as_utf8().context(#ctx_msg)?;
-                #update_stmt
-            },
-        };
-
-        outer_flags.push(utf8_def_flag);
-        match_arms.push(quoted);
+        handle_field(field, &struct_ident, &mut match_arms, &mut outer_flags);
     }
 
     let ret_val = if use_box {
@@ -196,6 +103,104 @@ fn inner(tokens: TokenStream2) -> syn::Result<TokenStream2> {
     };
 
     Ok(ret)
+}
+
+fn handle_field(
+    field: Field,
+    struct_ident: &Ident,
+    match_arms: &mut Vec<TokenStream2>,
+    outer_flags: &mut Vec<TokenStream2>,
+) {
+    let Type::Path(path) = field.ty else {
+        panic!("invalid type")
+    };
+
+    let field_ident = field.ident.unwrap();
+
+    // Parse attributes that exist on the field
+    let mut field_attr_map = parse_attrs(field.attrs).unwrap_or_default();
+
+    // Check if we need to parse an array
+    if let Some(arr_val) = field_attr_map.remove("array") {
+        let arr_val_str = arr_val.to_string();
+        if arr_val_str == "true" {
+            let count_ident = field_attr_map
+                .remove("count")
+                .expect("missing 'count' attribute");
+
+            let arr_map = field_attr_map
+                .remove("map")
+                .expect("missing 'map' attribute");
+
+            process_array(struct_ident, &field_ident, count_ident, arr_map, match_arms);
+            error_if_map_not_empty(&field_attr_map);
+            return;
+        } else if arr_val_str != "false" {
+            panic!("array must be `true` or `false` but got {arr_val_str}");
+        }
+    }
+
+    // We match a single literal, like `OwnerPartId`
+    // Perform renaming if attribute requests it
+    let match_pat = match field_attr_map.remove("rename") {
+        Some(TokenTree::Literal(v)) => v,
+        Some(v) => panic!("expected literal, got {v:?}"),
+        None => create_key_name(&field_ident),
+    };
+
+    let convert = match field_attr_map.remove("convert") {
+        Some(conv_fn) => quote! { .map_err(Into::into).and_then(#conv_fn) },
+        None => TokenStream2::new(),
+    };
+
+    // If we haven't consumed all attributes, yell
+    error_if_map_not_empty(&field_attr_map);
+
+    let update_stmt = if path.path.segments.first().unwrap().ident == "Option" {
+        // Wrap our field is an `Option<T>`
+        quote! { ret.#field_ident = Some(parsed); }
+    } else {
+        quote! { ret.#field_ident = parsed; }
+    };
+
+    let path_str = path.to_token_stream().to_string();
+
+    // Types `Location` and `LocationFract` are special cases
+    let is_location_fract = path_str.contains("LocationFract");
+    if is_location_fract || path_str.contains("Location") {
+        process_location(struct_ident, &field_ident, is_location_fract, match_arms);
+        return;
+    }
+
+    let Utf8Handler {
+        arm: utf8_arm,
+        define_flag: utf8_def_flag,
+        check_flag: utf8_check_flag,
+    } = if path_str.contains("String") || path_str.contains("str") {
+        // Altium does this weird thing where it will create a normal key and a key
+        // with `%UTF8%` if a value is utf8. We need to discard those redundant values
+        make_utf8_handler(&match_pat, &field_ident, struct_ident, &update_stmt)
+    } else {
+        Utf8Handler::default()
+    };
+
+    let ctx_msg = make_ctx_message(&match_pat, &field_ident, struct_ident);
+
+    let quoted = quote! {
+        #utf8_arm
+
+        #match_pat => {
+            #utf8_check_flag
+
+            let parsed = val.parse_as_utf8()
+                #convert
+                .context(#ctx_msg)?;
+            #update_stmt
+        },
+    };
+
+    outer_flags.push(utf8_def_flag);
+    match_arms.push(quoted);
 }
 
 /// Next type of token we are expecting
@@ -364,7 +369,7 @@ fn process_location(
                 #match_pat => #assign_field =
                     val.parse_as_utf8()
                         .map_err(Into::into)
-                        .and_then(crate::common::i32_mils_to_nm)
+                        .and_then(crate::common::mils_to_nm)
                         .context(#ctx_msg)?,
             }
         } else {

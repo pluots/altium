@@ -1,5 +1,6 @@
 use std::{fmt, str};
 
+use num_traits::CheckedMul;
 use uuid::Uuid;
 
 use crate::error::{AddContext, ErrorKind, Result, TruncBuf};
@@ -9,7 +10,7 @@ use crate::parse::{FromUtf8, ParseUtf8};
 const SEP: u8 = b'|';
 const KV_SEP: u8 = b'=';
 
-/// Common coordinate type
+/// Common coordinate type with x and y positions in nnaometers.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Location {
     // These are nonpublic because we might want to combine `Location` and `LocationFract`
@@ -180,27 +181,36 @@ impl Rgb {
         format!("#{:02x}{:02x}{:02x}", self.r, self.g, self.b)
     }
 
-    pub fn from_hex(r: u8, g: u8, b: u8) -> Self {
+    pub const fn from_hex(r: u8, g: u8, b: u8) -> Self {
         Self { r, g, b }
     }
 
-    pub fn black() -> Self {
+    pub fn as_float_rgba(self) -> [f32; 4] {
+        [
+            f32::from(self.r) / 255.0,
+            f32::from(self.g) / 255.0,
+            f32::from(self.b) / 255.0,
+            1.0,
+        ]
+    }
+
+    pub const fn black() -> Self {
         Self::from_hex(0x00, 0x00, 0x00)
     }
 
-    pub fn white() -> Self {
+    pub const fn white() -> Self {
         Self::from_hex(0xff, 0xff, 0xff)
     }
 
-    pub fn red() -> Self {
+    pub const fn red() -> Self {
         Self::from_hex(0xff, 0x00, 0x00)
     }
 
-    pub fn green() -> Self {
+    pub const fn green() -> Self {
         Self::from_hex(0x00, 0xff, 0x00)
     }
 
-    pub fn blue() -> Self {
+    pub const fn blue() -> Self {
         Self::from_hex(0x00, 0x00, 0xff)
     }
 }
@@ -307,16 +317,14 @@ pub fn is_number_pattern(s: &[u8], prefix: &[u8]) -> bool {
 }
 
 /// Infallible conversion
-pub fn i32_mils_to_nm(mils: i32) -> Result<i32> {
-    const FACTOR: i32 = 25400;
-    mils.checked_mul(FACTOR).ok_or_else(|| {
-        ErrorKind::Overflow(mils.into(), FACTOR.into(), '*').context("converting units")
-    })
-}
-
-pub fn u32_mils_to_nm(mils: u32) -> Result<u32> {
-    const FACTOR: u32 = 25400;
-    mils.checked_mul(FACTOR).ok_or_else(|| {
+pub fn mils_to_nm<T>(mils: T) -> Result<T>
+where
+    T: CheckedMul,
+    T: From<u16>,
+    i64: From<T>,
+{
+    const FACTOR: u16 = 25400;
+    mils.checked_mul(&FACTOR.into()).ok_or_else(|| {
         ErrorKind::Overflow(mils.into(), FACTOR.into(), '*').context("converting units")
     })
 }

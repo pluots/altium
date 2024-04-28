@@ -67,14 +67,6 @@ impl Component {
         svg::write(&file, &self.svg())
     }
 
-    pub fn draw<C: Canvas>(&self, canvas: &mut C) {
-        let ctx = SchDrawCtx {
-            fonts: &self.fonts,
-            storage: &self.storage,
-        };
-        self.records.iter().for_each(|r| r.draw(canvas, &ctx));
-    }
-
     /// The name of this part
     pub fn name(&self) -> &str {
         &self.name
@@ -104,5 +96,17 @@ impl Component {
     /// Iterate over all records in this component
     pub fn records(&self) -> impl Iterator<Item = &SchRecord> {
         self.records.iter()
+    }
+}
+
+impl Draw for Component {
+    type Context<'a> = ();
+
+    fn draw<C: Canvas>(&self, canvas: &mut C, _ctx: &()) {
+        let ctx = SchDrawCtx {
+            fonts: &self.fonts,
+            storage: &self.storage,
+        };
+        self.records.iter().for_each(|r| r.draw(canvas, &ctx));
     }
 }

@@ -1,6 +1,7 @@
+use std::sync::Arc;
 use std::{path::PathBuf, sync::atomic::Ordering::SeqCst};
 
-use egui::{ScrollArea, TextStyle, Ui, Vec2};
+use egui::{ScrollArea, TextStyle, Ui};
 use log::debug;
 
 use crate::backend::{
@@ -13,6 +14,8 @@ use crate::backend::{
     ViewState,
     HAS_FRESH_DATA,
 };
+#[cfg(feature = "_debug")]
+use crate::backend::{rect_disp, vec_disp};
 use crate::gfx;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -31,17 +34,6 @@ pub struct GuiApp {
     #[serde(skip)]
     active_tab: Option<usize>,
 }
-
-// impl Default for GuiApp {
-//     fn default() -> Self {
-//         Self {
-//             active_tab: None,
-//             tabs: vec![],
-//             recent_files: vec![],
-//             errors: vec![],
-//         }
-//     }
-// }
 
 impl GuiApp {
     /// Called once before the first frame.
@@ -216,20 +208,20 @@ fn make_center_panel(app: &mut GuiApp, ui: &mut Ui) {
     let tabdata = &mut app.tabs[tab_idx];
 
     let hovered = response.hovered();
-    // let hovered = ui.input(|istate| {
-    //     istate
-    //         .pointer
-    //         .latest_pos()
-    //         .is_some_and(|pos| response.rect.contains(pos))
-    // });
     let view_state = &mut tabdata.view_state;
+    view_state.rect = rect;
     if hovered {
         view_state.update_dragged_by(response.drag_delta());
         ui.input(|istate| view_state.update_with_input_state(istate));
     }
 
     #[cfg(feature = "_debug")]
-    ui.label(format!("view_state: {view_state:?}, hovered: {hovered}",));
+    ui.label(format!(
+        "view_state: {view_state:?}; vp: {}; hovered: {hovered}; vs offset_gfx: {}; pos world: {}",
+        rect_disp(view_state.world_viewport()),
+        vec_disp(view_state.offset_gfx()),
+        vec_disp(view_state.px_to_world(view_state.latest_pos.unwrap_or_default().to_vec2()))
+    ));
 
     match &mut tabdata.inner {
         TabDataInner::SchLib(tab) => make_center_panel_schlib(ui, rect, tab, view_state),
@@ -239,15 +231,11 @@ fn make_center_panel(app: &mut GuiApp, ui: &mut Ui) {
 
 #[allow(clippy::needless_pass_by_ref_mut)]
 fn make_center_panel_schlib(ui: &mut Ui, rect: egui::Rect, tab: &SchLibTab, vs: &ViewState) {
-    let comp = &tab.components[tab.active_component];
-    let dims = Vec2 {
-        x: rect.width(),
-        y: rect.height(),
-    };
-    ui.label(format!("rect: {rect:?}, dims: {dims:?}"));
+    let comp = Arc::clone(&tab.components[tab.active_component]);
+    ui.label(format!("rect: {rect:?}, vs: {vs:?}"));
     egui::Frame::canvas(ui.style()).show(ui, |ui| {
         ui.painter()
-            .add(crate::gfx::SchLibCallback::callback(rect, comp, vs, dims))
+            .add(crate::gfx::SchLibCallback::callback(comp, vs))
     });
 }
 

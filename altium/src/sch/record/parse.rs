@@ -17,29 +17,25 @@ pub fn parse_all_records(buf: &[u8], err_name: &str) -> Result<Vec<SchRecord>, E
     const LEN_MASK: u32 = 0x00ffffff;
     const UTF8_RECORD_TY: u32 = 0x00;
     const PIN_RECORD_TY: u32 = 0x01;
-    // No magic values :)
-    const U32_BYTES: usize = 4;
 
     let mut working = buf;
     let mut parsed = Vec::new();
     while !working.is_empty() {
-        assert!(
-            working.len() >= 4,
-            "expected at least 4 bytes, only got {}",
-            working.len()
-        );
+        let (arr, rest) = working
+            .split_first_chunk::<4>()
+            .unwrap_or_else(|| panic!("expected at least 4 bytes, only got {}", working.len()));
 
-        let info = u32::from_le_bytes(working[..4].try_into().unwrap());
-        let ty = (info & TY_MAEK) >> TY_SHIFT;
-        let len: usize = (info & LEN_MASK).try_into().unwrap();
+        let ty_info = u32::from_le_bytes(*arr);
+        let ty = (ty_info & TY_MAEK) >> TY_SHIFT;
+        let len: usize = (ty_info & LEN_MASK).try_into().unwrap();
 
         // Don't include the null terminator (which is included in `len`)
-        let to_parse = &working[U32_BYTES..(U32_BYTES + len - 1)];
+        let to_parse = &rest[..(len - 1)];
 
         // But do do a sanity check that the null exists
-        assert_eq!(working[U32_BYTES + len - 1], 0, "Expected null terimation");
+        assert_eq!(rest[len - 1], 0, "Expected null terimation");
 
-        working = &working[U32_BYTES + len..];
+        working = &rest[len..];
 
         let record = match ty {
             UTF8_RECORD_TY => parse_any_record(to_parse),

@@ -22,7 +22,7 @@ struct GridInstanceBuf {
 @vertex
 fn vs_main(
     @builtin(vertex_index) idx: u32, 
-    instance: GridInstanceBuf
+    instance: GridInstanceBuf,
 ) -> VertexOut {
     let rem = idx % u32(2);
     // -1.0 or +1.0

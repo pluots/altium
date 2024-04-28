@@ -3,7 +3,16 @@
 pub(crate) mod canvas;
 mod svg;
 
-pub use canvas::{Canvas, DrawImage, DrawLine, DrawPolygon, DrawRectangle, DrawText};
+pub use canvas::{
+    Canvas,
+    DrawImage,
+    DrawLine,
+    DrawPolygon,
+    DrawRectangle,
+    DrawText,
+    LineCap,
+    LineJoin,
+};
 
 pub use self::svg::SvgCtx;
 pub use crate::common::{Location, PosHoriz, PosVert, Rgb};

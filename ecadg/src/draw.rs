@@ -51,7 +51,7 @@ impl Canvas for PlotUiWrapper<'_> {
                 [f64::from(item.end.x()), f64::from(item.end.y())],
             ])
             .color(to_c32(item.color))
-            .width(item.width),
+            .width(item.width as f32),
         );
     }
 
@@ -86,7 +86,7 @@ impl Canvas for PlotUiWrapper<'_> {
                 .collect::<PlotPoints>(),
         )
         .stroke(Stroke {
-            width: f32::from(item.stroke_width) * 20.0,
+            width: item.stroke_width as f32 * 20.0,
             color: to_c32(item.stroke_color),
         })
         .fill_color(to_c32(item.fill_color).gamma_multiply(1.0));

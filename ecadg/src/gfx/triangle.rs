@@ -1,3 +1,4 @@
+#![allow(unused)]
 //! Just a demo triangle
 
 use std::num::NonZeroU64;
