@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering::SeqCst},
+        Arc,
         Mutex,
     },
     thread,
@@ -14,13 +15,20 @@ use altium::{
     SchDoc,
     SchLib,
 };
-use egui::Vec2;
+use egui::{Pos2, Rect, Vec2};
 use log::{info, trace};
+use lyon::geom::euclid::{Point2D, UnknownUnit};
 
 /// One entry per tab
 static GLOBAL_QUEUE: Mutex<GlobalQueue> = Mutex::new(GlobalQueue::new());
 /// Indicating that our GUI thread should pick this up
 pub static HAS_FRESH_DATA: AtomicBool = AtomicBool::new(false);
+
+#[allow(dead_code)]
+pub const NM_PER_M: f32 = 1e9;
+pub const M_PER_NM: f32 = 1e-9;
+/// Initial scale in m/px
+const DEFAULT_SCALE: f32 = 1e-5;
 
 #[derive(Debug)]
 pub struct GlobalQueue {
@@ -96,14 +104,18 @@ pub struct TabData {
 pub struct ViewState {
     /// Zoom if applicable, in m/px
     pub scale: f32,
-    /// Center position
-    pub center: Vec2,
+    /// Offset of world center from view center, in (m, m)
+    pub offset: Vec2,
+    /// Postion of the cursor in window coordinates
+    pub latest_pos: Option<Pos2>,
+    /// Rectangle of our view in window coordinates
+    pub rect: Rect,
 }
 
 impl ViewState {
     /// Apply a drag to this view state. Only do for a secondary (right) click.
     pub fn update_dragged_by(&mut self, drag_delta: Vec2) {
-        self.center += drag_delta;
+        self.offset += flip_y(drag_delta) * self.scale;
     }
 
     /// Update with zoom or multitouch (trackpad). Requires a zoom delta separately
@@ -112,15 +124,74 @@ impl ViewState {
         const SCALE_MAX: f32 = 10e-3; // 10 mm per px
 
         self.scale = f32::clamp(self.scale / istate.zoom_delta(), SCALE_MIN, SCALE_MAX);
-        self.center += istate.raw_scroll_delta;
+        self.offset += flip_y(istate.smooth_scroll_delta) * self.scale;
+        self.latest_pos = istate.pointer.latest_pos();
     }
+
+    /// Convert a pixel-sized shape to a GUI-sized shape (in the window if within the scale of
+    /// (-1.0..1.0)).
+    pub fn px_to_gfx(&self, pos: Vec2) -> Vec2 {
+        Vec2 {
+            x: pos.x / (self.rect.width() / 2.0),
+            y: pos.y / (self.rect.height() / 2.0),
+        }
+    }
+
+    /// Convert a point in world coordinates to graphics coordinates
+    #[allow(dead_code)]
+    pub fn world_to_gfx(&self, pos: Vec2) -> Vec2 {
+        self.px_to_gfx((pos + self.offset) / self.scale)
+    }
+
+    #[allow(dead_code)]
+    pub fn px_to_world(&self, pos: Vec2) -> Vec2 {
+        flip_y(pos - self.rect.center().to_vec2()) * self.scale - self.offset
+    }
+
+    /// Offset in graphics coordinates
+    pub fn offset_gfx(&self) -> Vec2 {
+        self.px_to_gfx(self.offset / self.scale)
+    }
+
+    /// What portion of the world we are able to view
+    #[cfg(feature = "_debug")]
+    pub fn world_viewport(&self) -> Rect {
+        Rect::from_center_size(self.offset.to_pos2(), self.rect.size() * self.scale)
+    }
+}
+
+#[cfg(feature = "_debug")]
+pub fn rect_disp(r: Rect) -> String {
+    format!("[{} - {}]", pos_disp(r.min), pos_disp(r.max))
+}
+
+#[allow(dead_code)]
+pub fn vec_disp(v: Vec2) -> String {
+    format!("[{:.4} {:.4}]", v.x, v.y)
+}
+
+#[allow(dead_code)]
+pub fn pos_disp(v: Pos2) -> String {
+    vec_disp(v.to_vec2())
+}
+
+/// Flip vertically for converting from graphics to world coordinates
+pub fn flip_y(mut v: Vec2) -> Vec2 {
+    v.y = -v.y;
+    v
+}
+
+pub fn v_to_p2d(v: Vec2) -> Point2D<f32, UnknownUnit> {
+    Point2D::new(v.x, v.y)
 }
 
 impl Default for ViewState {
     fn default() -> Self {
         Self {
-            scale: 1e-4, // m/px
-            center: Vec2::default(),
+            scale: DEFAULT_SCALE,
+            offset: Vec2::default(),
+            latest_pos: None,
+            rect: Rect::ZERO,
         }
     }
 }
@@ -136,7 +207,7 @@ pub enum TabDataInner {
 /// and track the selection
 #[derive(Debug, Default)]
 pub struct SchLibTab {
-    pub components: Vec<Component>,
+    pub components: Vec<Arc<Component>>,
     /// Index in `components` to display in a scrollable list
     pub active_component: usize,
     pub search_query: String,
@@ -209,7 +280,7 @@ fn schlib_to_tab(path: PathBuf) -> Option<TabData> {
     };
 
     let mut inner = SchLibTab {
-        components: lib.components().collect(),
+        components: lib.components().map(Arc::new).collect(),
         ..Default::default()
     };
 

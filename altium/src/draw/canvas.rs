@@ -3,7 +3,7 @@ use crate::{
     font::Font,
 };
 
-/// Generic trait for something that can be drawn. Beware, unstable!
+/// Generic trait for something that can be drawn to. Beware, unstable!
 pub trait Canvas: crate::sealed::Sealed {
     fn draw_text(&mut self, item: DrawText);
     fn draw_line(&mut self, item: DrawLine);
@@ -11,6 +11,36 @@ pub trait Canvas: crate::sealed::Sealed {
     fn draw_rectangle(&mut self, item: DrawRectangle);
     fn draw_image(&mut self, item: DrawImage);
     fn add_comment<S: Into<String>>(&mut self, _comment: S) {}
+}
+
+/// Line ending.
+///
+/// See <https://docs.rs/lyon_tessellation/1.0.5/lyon_tessellation/enum.LineCap.html> for more.
+#[derive(Clone, Debug, Default)]
+pub enum LineCap {
+    /// Stop at the endpoint
+    #[default]
+    Butt,
+    /// Square past the endpoint
+    Square,
+    /// Rounded cap centered at the endpoint
+    Round,
+}
+
+/// How two lines should be combined
+///
+/// See <https://svgwg.org/specs/strokes/#StrokeLinejoinProperty> for more.
+#[derive(Clone, Debug, Default)]
+pub enum LineJoin {
+    /// Sharp corners
+    #[default]
+    Miter,
+    /// Miter but possibly don't come to a fine point
+    MiterClip,
+    /// Round over the join point
+    Round,
+    /// Square off the join point
+    Bevel,
 }
 
 /// Helper struct to write some text
@@ -31,8 +61,10 @@ pub struct DrawLine {
     pub start: Location,
     pub end: Location,
     pub color: Rgb,
-    pub width: u16,
-    // pub width: Option<&'a str>,
+    pub width: u32,
+    pub start_cap: LineCap,
+    pub end_cap: LineCap,
+    pub line_join: LineJoin,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -43,7 +75,7 @@ pub struct DrawRectangle {
     pub height: i32,
     pub fill_color: Rgb,
     pub stroke_color: Rgb,
-    pub stroke_width: u16,
+    pub stroke_width: u32,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -51,7 +83,7 @@ pub struct DrawPolygon<'a> {
     pub locations: &'a [Location],
     pub fill_color: Rgb,
     pub stroke_color: Rgb,
-    pub stroke_width: u16,
+    pub stroke_width: u32,
 }
 
 pub struct DrawImage {}

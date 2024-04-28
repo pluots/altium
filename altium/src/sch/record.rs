@@ -61,7 +61,7 @@ pub(super) use parse::parse_all_records;
 
 use super::params::Justification;
 use super::pin::SchPin;
-use crate::common::{Location, LocationFract, ReadOnlyState, UniqueId};
+use crate::common::{mils_to_nm, Location, LocationFract, ReadOnlyState, UniqueId};
 use crate::error::{AddContext, TruncBuf};
 use crate::font::FontCollection;
 use crate::Error;
@@ -242,7 +242,8 @@ pub struct Bezier {
     color: Rgb,
     index_in_sheet: i16,
     is_not_accessible: bool,
-    line_width: u16,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
     pub locations: Vec<Location>,
     owner_index: u8,
@@ -259,7 +260,8 @@ pub struct PolyLine {
     owner_part_id: i8,
     is_not_accessible: bool,
     index_in_sheet: i16,
-    line_width: u16,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     pub color: Rgb,
     #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
     pub locations: Vec<Location>,
@@ -275,7 +277,8 @@ pub struct Polygon {
     index_in_sheet: i16,
     is_not_accessible: bool,
     is_solid: bool,
-    line_width: u16,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
     pub locations: Vec<Location>,
     owner_index: u8,
@@ -293,7 +296,8 @@ pub struct Ellipse {
     index_in_sheet: i16,
     is_not_accessible: bool,
     is_solid: bool,
-    line_width: u16,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     pub location: Location,
     owner_index: u8,
     owner_part_id: i8,
@@ -323,7 +327,8 @@ pub struct RectangleRounded {
     index_in_sheet: i16,
     is_not_accessible: bool,
     is_solid: bool,
-    line_width: u16,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     location: Location,
     owner_index: u8,
     owner_part_id: i8,
@@ -345,7 +350,8 @@ pub struct ElipticalArc {
     radius_frac: i32,
     secondary_radius: i8,
     secondary_radius_frac: i32,
-    line_width: i8,
+    #[from_record(convert = mils_to_nm)]
+    line_width: i32,
     start_angle: f32,
     end_angle: f32,
     pub color: Rgb,
@@ -365,7 +371,8 @@ pub struct Arc {
     radius_frac: i32,
     secondary_radius: i8,
     secondary_radius_frac: i32,
-    line_width: i8,
+    #[from_record(convert = mils_to_nm)]
+    line_width: i32,
     start_angle: f32,
     end_angle: f32,
     pub color: Rgb,
@@ -382,7 +389,8 @@ pub struct Line {
     index_in_sheet: i16,
     is_not_accessible: bool,
     is_solid: bool,
-    line_width: u16,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     location_count: u16,
     location_x: i32,
     location_y: i32,
@@ -403,7 +411,8 @@ pub struct Rectangle {
     index_in_sheet: i16,
     is_not_accessible: bool,
     pub is_solid: bool,
-    line_width: u16,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     /// Bottom left corner
     pub location: Location,
     owner_index: u8,
@@ -420,7 +429,8 @@ pub struct SheetSymbol {
     owner_index: u8,
     owner_part_id: i8,
     index_in_sheet: i16,
-    line_width: u16,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     pub color: Rgb,
     pub area_color: Rgb,
     is_solid: bool,
@@ -533,7 +543,8 @@ pub struct Bus {
     owner_index: u8,
     owner_part_id: i8,
     index_in_sheet: i16,
-    line_width: u16,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     pub color: Rgb,
     #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
     pub locations: Vec<Location>,
@@ -546,7 +557,8 @@ pub struct Bus {
 pub struct Wire {
     owner_index: u8,
     owner_part_id: i8,
-    line_width: u16,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     pub color: Rgb,
     #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
     pub locations: Vec<Location>,

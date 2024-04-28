@@ -1,8 +1,8 @@
 //! How to draw records, components, etc
 
 use crate::common::{Location, PosHoriz, PosVert, Rgb, Rotation90, Visibility};
-use crate::draw::canvas::DrawRectangle;
 use crate::draw::canvas::{Canvas, DrawLine, DrawText};
+use crate::draw::canvas::{DrawRectangle, LineCap};
 use crate::draw::{Draw, DrawPolygon};
 use crate::font::FontCollection;
 use crate::sch::pin::SchPin;
@@ -86,24 +86,27 @@ impl Draw for SchPin {
             start,
             end,
             color: Rgb::black(),
-            width: 4,
-            // ..Default::default()
+            width: 30000,
+            start_cap: LineCap::Round,
+            ..Default::default()
         });
 
         // Altium draws a small white plus at the pin's connect position, so we
         // do too
         canvas.draw_line(DrawLine {
-            start: end.add_x(1),
-            end: end.add_x(-1),
+            start: end.add_x(10000),
+            end: end.add_x(-10000),
             color: Rgb::white(),
-            width: 1,
+            width: 5000,
+            ..Default::default()
         });
 
         canvas.draw_line(DrawLine {
-            start: end.add_y(1),
-            end: end.add_y(-1),
+            start: end.add_y(10000),
+            end: end.add_y(-10000),
             color: Rgb::white(),
-            width: 1,
+            width: 5000,
+            ..Default::default()
         });
 
         // FIXME: use actual spacing & fonts from pin spec
@@ -187,6 +190,7 @@ impl Draw for record::PolyLine {
                 end: b,
                 color: self.color,
                 width: self.line_width * 4,
+                ..Default::default()
             });
         }
     }
@@ -240,6 +244,7 @@ impl Draw for record::Line {
             end: Location::new(self.corner_x, self.corner_y),
             color: self.color,
             width: self.line_width,
+            ..Default::default()
         });
     }
 }
@@ -347,6 +352,7 @@ impl Draw for record::Bus {
                 end: b,
                 color: self.color,
                 width: self.line_width * 4,
+                ..Default::default()
             });
         }
     }
@@ -364,6 +370,7 @@ impl Draw for record::Wire {
                 end: b,
                 color: self.color,
                 width: self.line_width * 4,
+                ..Default::default()
             });
         }
     }

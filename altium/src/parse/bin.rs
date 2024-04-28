@@ -1,4 +1,4 @@
-use std::str;
+use std::{fmt::Debug, str};
 
 use crate::{common::str_from_utf8, error::TruncBuf, ErrorKind};
 
@@ -26,35 +26,28 @@ pub fn extract_sized_buf(
 ) -> Result<(&[u8], &[u8]), ErrorKind> {
     let (data_len, rest): (usize, _) = match len_match {
         BufLenMatch::U24UpperOne | BufLenMatch::U24UpperZero => {
-            let [l0, l1, l2, l3, rest @ ..] = buf else {
-                return Err(ErrorKind::BufferTooShort(4, TruncBuf::new(buf)));
-            };
+            let (arr, rest) = split_chunk::<4>(buf)?;
+            let mut arr = *arr;
+            let l3 = arr[3];
+            arr[3] = 0x00;
 
             if len_match == BufLenMatch::U24UpperOne {
-                assert_eq!(*l3, 0x01, "expected 0x01 in uppper bit but got {l3}");
+                assert_eq!(l3, 0x01, "expected 0x01 in uppper bit but got {l3}");
             } else if len_match == BufLenMatch::U24UpperZero {
-                assert_eq!(*l3, 0x00, "expected 0x00 in uppper bit but got {l3}");
+                assert_eq!(l3, 0x00, "expected 0x00 in uppper bit but got {l3}");
             }
 
-            let len = u32::from_le_bytes([*l0, *l1, *l2, 0x00])
-                .try_into()
-                .unwrap();
+            let len = u32::from_le_bytes(arr).try_into().unwrap();
             (len, rest)
         }
         BufLenMatch::U32 => {
-            let (Some(len_buf), Some(rest)) = (buf.get(..4), buf.get(4..)) else {
-                return Err(ErrorKind::BufferTooShort(4, TruncBuf::new(buf)));
-            };
-            let len = u32::from_le_bytes(len_buf.try_into().unwrap())
-                .try_into()
-                .unwrap();
+            let (arr, rest) = split_chunk::<4>(buf)?;
+            let len = u32::from_le_bytes(*arr).try_into().unwrap();
             (len, rest)
         }
         BufLenMatch::U8 => {
-            let [l0, rest @ ..] = buf else {
-                return Err(ErrorKind::BufferTooShort(4, TruncBuf::new(buf)));
-            };
-            ((*l0).into(), rest)
+            let (arr, rest) = split_chunk::<1>(buf)?;
+            (arr[0].into(), rest)
         }
     };
 
@@ -71,6 +64,12 @@ pub fn extract_sized_buf(
     } else {
         Ok((data, rest))
     }
+}
+
+/// Helper method for `split_first_chunk` that returns a buffer error
+pub fn split_chunk<const N: usize>(buf: &[u8]) -> Result<(&[u8; N], &[u8]), ErrorKind> {
+    buf.split_first_chunk::<N>()
+        .ok_or_else(|| ErrorKind::BufferTooShort(N, TruncBuf::new(buf)))
 }
 
 /// Extract a buffer that starts with a 1-, 3- or 4-byte header to a string
