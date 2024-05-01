@@ -1,6 +1,8 @@
 use std::{fmt, str};
 
-use crate::error::{ErrorKind, TruncBuf};
+use uuid::Uuid;
+
+use crate::error::{AddContext, ErrorKind, Result, TruncBuf};
 use crate::parse::{FromUtf8, ParseUtf8};
 
 /// Separator in textlike streams
@@ -14,11 +16,22 @@ pub struct Location {
     pub y: i32,
 }
 
+/// Location with fraction
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct LocationFract {
+    pub x: i32,
+    pub x_fract: i32,
+    pub y: i32,
+    pub y_fract: i32,
+}
+
 impl Location {
+    #[must_use]
     pub fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
 
+    #[must_use]
     pub fn add_x(self, x: i32) -> Self {
         Self {
             x: self.x + x,
@@ -26,10 +39,20 @@ impl Location {
         }
     }
 
+    #[must_use]
     pub fn add_y(self, y: i32) -> Self {
         Self {
             x: self.x,
             y: self.y + y,
+        }
+    }
+}
+
+impl From<(i32, i32)> for Location {
+    fn from(value: (i32, i32)) -> Self {
+        Self {
+            x: value.0,
+            y: value.1,
         }
     }
 }
@@ -41,48 +64,73 @@ pub enum Visibility {
     Visible,
 }
 
-/// A unique ID
+impl FromUtf8<'_> for Visibility {
+    fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
+        todo!("{}", String::from_utf8_lossy(buf))
+    }
+}
+
+/// An Altium unique ID.
 ///
+/// Every entity in Altium has a unique ID including files, library items, and records.
 // TODO: figure out what file types use this exact format
 #[derive(Clone, Copy, PartialEq)]
-pub struct UniqueId([u8; 8]);
+pub enum UniqueId {
+    /// Altium's old style UUID
+    Simple([u8; 8]),
+    /// UUID style, used by some newer files
+    Uuid(Uuid),
+}
 
 impl UniqueId {
-    pub(crate) fn from_slice<S: AsRef<[u8]>>(buf: S) -> Option<Self> {
-        buf.as_ref().try_into().ok().map(Self)
+    #[allow(unused)]
+    fn from_slice<S: AsRef<[u8]>>(buf: S) -> Option<Self> {
+        buf.as_ref()
+            .try_into()
+            .ok()
+            .map(Self::Simple)
+            .or_else(|| Uuid::try_parse_ascii(buf.as_ref()).ok().map(Self::Uuid))
     }
+}
 
-    /// Get this `UniqueId` as a string
-    pub fn as_str(&self) -> &str {
-        str::from_utf8(&self.0).expect("unique IDs should always be ASCII")
+impl fmt::Display for UniqueId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UniqueId::Simple(v) => str::from_utf8(v)
+                .expect("unique IDs should always be ASCII")
+                .fmt(f),
+            UniqueId::Uuid(v) => v.as_hyphenated().fmt(f),
+        }
     }
 }
 
 impl Default for UniqueId {
     fn default() -> Self {
-        Self(*b"00000000")
+        Self::Simple(*b"00000000")
     }
 }
 
 impl fmt::Debug for UniqueId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("UniqueId").field(&self.as_str()).finish()
+        f.debug_tuple("UniqueId").field(&self.to_string()).finish()
     }
 }
 
 impl FromUtf8<'_> for UniqueId {
     fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
-        Ok(Self(buf.as_ref().try_into().map_err(|_| {
-            ErrorKind::InvalidUniqueId(TruncBuf::new(buf))
-        })?))
+        buf.as_ref()
+            .try_into()
+            .ok()
+            .map(Self::Simple)
+            .or_else(|| Uuid::try_parse_ascii(buf).ok().map(Self::Uuid))
+            .ok_or(ErrorKind::InvalidUniqueId(TruncBuf::new(buf)))
     }
 }
 
 /// Altium uses the format `Key1=Val1|Key2=Val2...`, this handles that
 pub fn split_altium_map(buf: &[u8]) -> impl Iterator<Item = (&[u8], &[u8])> {
     buf.split(|b| *b == SEP).filter(|x| !x.is_empty()).map(|x| {
-        split_once(x, KV_SEP)
-            .unwrap_or_else(|| panic!("couldn't find `=` in `{}`", buf2lstring(buf)))
+        split_once(x, KV_SEP).unwrap_or_else(|| panic!("couldn't find `=` in `{}`", buf2lstr(buf)))
     })
 }
 
@@ -98,7 +146,7 @@ where
 }
 
 /// Quick helper method for a lossy string
-pub fn buf2lstring(buf: &[u8]) -> String {
+pub fn buf2lstr(buf: &[u8]) -> String {
     String::from_utf8_lossy(buf).to_string()
 }
 
@@ -180,6 +228,12 @@ impl Rotation {
     }
 }
 
+impl FromUtf8<'_> for Rotation {
+    fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
+        todo!("{}", String::from_utf8_lossy(buf))
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum ReadOnlyState {
     #[default]
@@ -194,7 +248,7 @@ impl TryFrom<u8> for ReadOnlyState {
         let res = match value {
             x if x == Self::ReadWrite as u8 => Self::ReadWrite,
             x if x == Self::ReadOnly as u8 => Self::ReadOnly,
-            _ => return Err(ErrorKind::SheetStyle(value)),
+            _ => return Err(ErrorKind::ReadOnlyState(value)),
         };
 
         Ok(res)
@@ -224,4 +278,33 @@ pub enum PosVert {
     Top,
     Middle,
     Bottom,
+}
+
+/// Verify a number pattern matches, e.g. `X100`
+pub fn is_number_pattern(s: &[u8], prefix: &[u8]) -> bool {
+    if let Some(stripped) = s
+        .strip_prefix(prefix)
+        .map(|s| s.strip_prefix(&[b'-']).unwrap_or(s))
+    {
+        if stripped.iter().all(u8::is_ascii_digit) {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Infallible conversion
+pub fn i32_mils_to_nm(mils: i32) -> Result<i32> {
+    const FACTOR: i32 = 25400;
+    mils.checked_mul(FACTOR).ok_or_else(|| {
+        ErrorKind::Overflow(mils.into(), FACTOR.into(), '*').context("converting units")
+    })
+}
+
+pub fn u32_mils_to_nm(mils: u32) -> Result<u32> {
+    const FACTOR: u32 = 25400;
+    mils.checked_mul(FACTOR).ok_or_else(|| {
+        ErrorKind::Overflow(mils.into(), FACTOR.into(), '*').context("converting units")
+    })
 }

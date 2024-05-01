@@ -2,14 +2,9 @@
 //! represented as zlib-compressed data.
 
 use core::fmt;
-use std::ffi::OsStr;
-use std::fmt::LowerHex;
-use std::io::{self, Cursor, Read, Seek, Write};
+use std::io::{Cursor, Read, Seek};
 use std::sync::Mutex;
-use std::{
-    collections::BTreeMap,
-    sync::{Arc, RwLock},
-};
+use std::{collections::BTreeMap, sync::Arc};
 
 use cfb::CompoundFile;
 use flate2::read::ZlibDecoder;
@@ -24,8 +19,9 @@ use crate::{Error, ErrorKind};
 ///
 /// We try to avoid:
 ///
-/// 1. Decompressing anything we don't have to, and
+/// 1. Decompressing anything we don't have to
 /// 2. Decompressing anything more than once
+/// 3. Storing anything more than once
 ///
 /// So, we have a solution where:
 ///
@@ -48,7 +44,7 @@ pub enum CompressedData {
 }
 
 impl Storage {
-    const STREAMNAME: &str = "Storage";
+    const STREAMNAME: &'static str = "Storage";
 
     /// Get the data from a key (path) name if available
     ///
@@ -88,24 +84,21 @@ impl Storage {
     }
 
     pub(crate) fn parse(buf: &[u8]) -> Result<Self, Error> {
-        let (mut header, mut rest) =
-            extract_sized_buf(buf, BufLenMatch::U32).context("parsing storage")?;
+        let (header, mut rest) =
+            extract_sized_buf(buf, BufLenMatch::U32, true).context("parsing storage")?;
 
-        assert_eq!(
-            header.last(),
-            Some(&0),
-            "expected null termination at {:02x}",
-            TruncBuf::new_end(header)
-        );
-        header = &header[..header.len().saturating_sub(1)];
+        // header = &header[..header.len().saturating_sub(1)];
 
         let mut map_kv = split_altium_map(header);
+
         let Some((b"HEADER", b"Icon storage")) = map_kv.next() else {
-            return Err(ErrorKind::new_invalid_header(header).context("parsing storage"));
+            return Err(
+                ErrorKind::new_invalid_header(header, "Icon storage").context("parsing storage")
+            );
         };
 
         // Weight indicates how many items are in the storage
-        let Some((b"Weight", weight_val)) = map_kv.next() else {
+        let Some((b"Weight", _weight_val)) = map_kv.next() else {
             assert!(
                 rest.is_empty(),
                 "weight not present but rest was not empty at {}",
@@ -129,8 +122,8 @@ impl Storage {
             rest = &rest[5..];
 
             // Path comes first, then data
-            (path, rest) = extract_sized_utf8_buf(rest, BufLenMatch::U8)?;
-            (data, rest) = extract_sized_buf(rest, BufLenMatch::U32)?;
+            (path, rest) = extract_sized_utf8_buf(rest, BufLenMatch::U8, false)?;
+            (data, rest) = extract_sized_buf(rest, BufLenMatch::U32, false)?;
 
             map.insert(
                 path.into(),

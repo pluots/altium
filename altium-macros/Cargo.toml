@@ -11,10 +11,10 @@ proc-macro = true
 
 [dependencies]
 convert_case = "0.6.0"
-proc-macro2 = "1.0.66"
-quote = "1.0.32"
-regex = "1.9.1"
-syn = "2.0.28"
+proc-macro2 = "1.0.67"
+quote = "1.0.33"
+regex = "1.9.5"
+syn = "2.0.37"
 # syn = { version = "2.0.22", features = ["extra-traits"] }
 
 [package.metadata.release]

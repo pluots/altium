@@ -21,19 +21,11 @@ jobs:
     name: "Clippy (cargo clippy)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: clippy
+      - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --all-features --all-targets -- -D warnings
       - run: cargo clippy --no-default-features --all-targets -- -D warnings
 
@@ -46,52 +38,32 @@ jobs:
           os: ubuntu-latest
           target: x86_64-unknown-linux-musl
           extension: ''
-        # - build: macos
-        #   os: macos-latest
-        #   target: x86_64-apple-darwin
-        #   extension: ''
+        - build: macos
+          os: macos-latest
+          target: x86_64-apple-darwin
+          extension: ''
         - build: windows-msvc
           os: windows-latest
           target: x86_64-pc-windows-msvc
     name: "Test on ${{ matrix.os }} (cargo test)"
     runs-on: ${{ matrix.os }}
-    env:
-      MYSQLCLIENT_LIB_DIR: C:\mysql\lib
     steps:
-      - uses: actions/checkout@v2
-      - name: List files
-        run: |
-          pwd
-          ls
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v3
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: dtolnay/rust-toolchain@1.65.0
+          lfs: true
+      - uses: dtolnay/rust-toolchain@1.70.0
+      - uses: Swatinem/rust-cache@v2
       - run: cargo test -- --nocapture
 
   fmt:
     name: "Format (cargo fmt)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@nightly
         with:
             components: rustfmt
+      - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
       - uses: actions/setup-python@v3
 
@@ -99,17 +71,9 @@ jobs:
     name: "Docs (cargo doc)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
       - run: cargo doc
 
   outdated:
@@ -120,4 +84,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/install@cargo-outdated
+      - uses: Swatinem/rust-cache@v2
       - run: cargo outdated --workspace --exit-code 1

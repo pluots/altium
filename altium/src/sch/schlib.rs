@@ -10,7 +10,7 @@ use std::{fmt, str};
 use cfb::CompoundFile;
 use section_keys::update_section_keys;
 
-use crate::common::{buf2lstring, split_altium_map, Color, UniqueId};
+use crate::common::{buf2lstr, split_altium_map, Color, UniqueId};
 use crate::error::{AddContext, ErrorKind};
 use crate::font::{Font, FontCollection};
 use crate::parse::ParseUtf8;
@@ -27,6 +27,7 @@ pub struct SchLib<F> {
     /// Information contained in the compound file header. We use this as a
     /// lookup to see what we can extract from the file.
     header: SchLibMeta,
+    /// Blob storage used by Altium
     storage: Arc<Storage>,
 }
 
@@ -35,7 +36,9 @@ impl SchLib<File> {
     /// Open a file from disk
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let cfile = cfb::open(&path)?;
-        Self::from_cfile(cfile).or_context(|| format!("opening {}", path.as_ref().display()))
+        Self::from_cfile(cfile)
+            .context("parsing SchLib")
+            .or_context(|| format!("with file {}", path.as_ref().display()))
     }
 }
 
@@ -43,13 +46,13 @@ impl<'a> SchLib<Cursor<&'a [u8]>> {
     /// Open an in-memory file from a buffer
     pub fn from_buffer(buf: &'a [u8]) -> Result<Self, Error> {
         let cfile = cfb::CompoundFile::open(Cursor::new(buf))?;
-        Self::from_cfile(cfile)
+        Self::from_cfile(cfile).context("parsing SchLib from Cursor")
     }
 }
 
 impl<F: Read + Seek> SchLib<F> {
     /// Unique ID of this schematic library
-    fn unique_id(&self) -> UniqueId {
+    pub fn unique_id(&self) -> UniqueId {
         self.header.unique_id
     }
 
@@ -93,12 +96,10 @@ impl<F: Read + Seek> SchLib<F> {
         {
             // Scope of refcell borrow
             let mut cfile_ref = self.cfile.borrow_mut();
-            let mut stream = cfile_ref.open_stream(&data_path).unwrap_or_else(|e| {
-                panic!(
-                    "missing required stream `{}` with error {e}",
-                    data_path.display()
-                )
-            });
+            let mut stream = cfile_ref.open_stream(&data_path).map_err(|e| {
+                let path_disp = data_path.display();
+                Error::from(e).context(format!("reading required stream `{path_disp}`",))
+            })?;
             stream.read_to_end(&mut buf).unwrap();
         }
 
@@ -137,7 +138,7 @@ impl<F: Read + Seek> SchLib<F> {
         let mut header = SchLibMeta::parse_cfile(&mut cfile, &mut tmp_buf)?;
         tmp_buf.clear();
 
-        let mut storage = Storage::parse_cfile(&mut cfile, &mut tmp_buf)?;
+        let storage = Storage::parse_cfile(&mut cfile, &mut tmp_buf)?;
         tmp_buf.clear();
 
         update_section_keys(&mut cfile, &mut tmp_buf, &mut header)?;
@@ -219,32 +220,31 @@ pub(crate) struct SchLibMeta {
 
 /// Parse implementation
 impl SchLibMeta {
-    const STREAMNAME: &str = "FileHeader";
+    const STREAMNAME: &'static str = "FileHeader";
 
     /// Magic header found in all streams
-    const HEADER: &[u8] =
+    const HEADER: &'static [u8] =
         b"HEADER=Protel for Windows - Schematic Library Editor Binary File Version 5.0";
-    const HEADER_KEY: &[u8] = b"HEADER";
 
     // /// Every header starts with this
     // const PFX: &[u8] = &[0x7a, 0x04, 0x00, 0x00, b'|'];
     // Seems like each stream starts with 4 random bytes followed by a `|`?
     const PFX_LEN: usize = 5;
-    const SFX: &[u8] = &[0x00];
+    const SFX: &'static [u8] = &[0x00];
 
     /* font-related items */
     /// `FontName1=Times New Roman`
-    const FONT_NAME_PFX: &[u8] = b"FontName";
+    const FONT_NAME_PFX: &'static [u8] = b"FontName";
     /// `Size1=9`
-    const FONT_SIZE_PFX: &[u8] = b"Size";
+    const FONT_SIZE_PFX: &'static [u8] = b"Size";
 
     /* part-related items */
     /// `Libref0=Part Name`
-    const COMP_LIBREF_PFX: &[u8] = b"LibRef";
+    const COMP_LIBREF_PFX: &'static [u8] = b"LibRef";
     /// `CompDescr0=Long description of thing Name`
-    const COMP_DESC_PFX: &[u8] = b"CompDescr";
+    const COMP_DESC_PFX: &'static [u8] = b"CompDescr";
     /// `PartCount0=2` number of subcomponents (seems to default to 2?)
-    const COMP_PARTCOUNT_PFX: &[u8] = b"PartCount";
+    const COMP_PARTCOUNT_PFX: &'static [u8] = b"PartCount";
 
     /// Validate a `FileHeader` and extract its information
     ///
@@ -255,8 +255,6 @@ impl SchLibMeta {
     ) -> Result<Self, ErrorKind> {
         let mut stream = cfile.open_stream(Self::STREAMNAME)?;
         stream.read_to_end(tmp_buf)?;
-
-        println!("parsing cfile:\n{}", String::from_utf8_lossy(tmp_buf));
 
         let to_parse = tmp_buf
             .get(Self::PFX_LEN..)
@@ -297,7 +295,7 @@ impl SchLibMeta {
             }
 
             match key {
-                Self::HEADER_KEY => continue,
+                b"HEADER" => continue,
                 b"Weight" => ret.weight = val.parse_as_utf8()?,
                 b"MinorVersion" => ret.minor_version = val.parse_as_utf8()?,
                 b"UniqueID" => ret.unique_id = val.parse_as_utf8()?,
@@ -342,21 +340,18 @@ impl SchLibMeta {
                     let idx: usize = key[Self::COMP_PARTCOUNT_PFX.len()..].parse_as_utf8()?;
                     ret.components[idx].part_count = val.parse_as_utf8()?;
                 }
-                _ => eprintln!(
-                    "unsupported file header key {}:{}",
-                    buf2lstring(key),
-                    buf2lstring(val)
+                _ => log::warn!(
+                    "unsupported SchLib file header key {}:{}",
+                    buf2lstr(key),
+                    buf2lstr(val)
                 ),
             }
         }
 
         ret.fonts = Arc::new(fonts.into());
-        println!("done parsing cfile");
         Ok(ret)
     }
 }
-
-// pub struct Components {}
 
 /// Information available in the header about a single component: includes
 /// libref and part count
@@ -386,6 +381,7 @@ impl ComponentMeta {
     /// Number of subparts within a component
     ///
     /// FIXME: this seems to be doubled?
+    #[allow(unused)]
     fn part_count(&self) -> u16 {
         self.part_count
     }

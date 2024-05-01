@@ -3,45 +3,65 @@
 use core::fmt;
 use std::str::{self, Utf8Error};
 
-use super::SchRecord;
-use crate::common::{Location, Rotation, Visibility};
+use altium_macros::FromRecord;
+use log::warn;
 
-#[derive(Clone, Debug, Default, PartialEq)]
+use super::SchRecord;
+use crate::common::{i32_mils_to_nm, u32_mils_to_nm, Location, Rotation, Visibility};
+use crate::error::AddContext;
+use crate::parse::ParseUtf8;
+use crate::parse::{FromRecord, FromUtf8};
+use crate::{ErrorKind, Result, UniqueId};
+
+/// Representation of a pin
+///
+/// Altium stores pins as binary in the schematic libraries but text in the
+/// schematic documents, so we need to parse both.
+#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[from_record(id = 2, record_variant = Pin)]
 pub struct SchPin {
+    pub(super) formal_type: u8,
     pub(super) owner_index: u8,
     pub(super) owner_part_id: u8,
     pub(super) description: Box<str>,
+    // #[from_record(rename = b"PinDesignator")]
     pub(super) designator: Box<str>,
     pub(super) name: Box<str>,
-    pub(super) location_x: i32,
-    pub(super) location_y: i32,
+    pub(super) location: Location,
+    pub(super) electrical: ElectricalType,
+    #[from_record(rename = b"PinLength")]
     pub(super) length: u32,
+    #[from_record(rename = b"SwapIDPart")]
+    pub(super) swap_id_part: Box<str>,
     pub(super) designator_vis: Visibility,
     pub(super) name_vis: Visibility,
     pub(super) rotation: Rotation,
+    #[from_record(rename = b"PinPropagationDelay")]
+    pub(super) propegation_delay: f32,
+    pub(super) unique_id: UniqueId,
 }
 
 impl SchPin {
-    pub(crate) fn parse(buf: &[u8]) -> Result<SchRecord, PinError> {
+    pub(crate) fn parse(buf: &[u8]) -> Result<SchRecord> {
         // 6 bytes unknown
         let [_, _, _, _, _, _, rest @ ..] = buf else {
-            return Err(PinError::TooShort(buf.len(), "initial group"));
+            return Err(PinError::TooShort(buf.len(), "initial group").into());
         };
         // 6 more bytes unknown - symbols
         let [_, _, _, _, _, _, rest @ ..] = rest else {
-            return Err(PinError::TooShort(rest.len(), "second group"));
+            return Err(PinError::TooShort(rest.len(), "second group").into());
         };
 
         let (description, rest) = sized_buf_to_utf8(rest, "description")?;
 
         // TODO: ty_info
-        let [formal_ty, ty_info, rot_hide, l0, l1, x0, x1, y0, y1, rest @ ..] = rest else {
-            return Err(PinError::TooShort(rest.len(), "position extraction"));
+        let [formal_type, _ty_info, rot_hide, l0, l1, x0, x1, y0, y1, rest @ ..] = rest else {
+            return Err(PinError::TooShort(rest.len(), "position extraction").into());
         };
 
         assert_eq!(
-            *formal_ty, 1,
-            "expected formal type of 1 but got {formal_ty}"
+            *formal_type, 1,
+            "expected formal type of 1 but got {formal_type}"
         );
         let (rotation, des_vis, name_vis) = get_rotation_and_hiding(*rot_hide);
         let length = u16::from_le_bytes([*l0, *l1]);
@@ -49,32 +69,36 @@ impl SchPin {
         let location_y = i16::from_le_bytes([*y0, *y1]);
 
         let [_, _, _, _, rest @ ..] = rest else {
-            return Err(PinError::TooShort(rest.len(), "remaining buffer"));
+            return Err(PinError::TooShort(rest.len(), "remaining buffer").into());
         };
 
         let (name, rest) = sized_buf_to_utf8(rest, "name")?;
         let (designator, rest) = sized_buf_to_utf8(rest, "designator")?;
 
-        assert!(
-            matches!(rest, [_, 0x03, b'|', b'&', b'|']),
-            "unexpected rest: {rest:02x?}"
-        );
+        if !matches!(rest, [_, 0x03, b'|', b'&', b'|']) {
+            warn!("unexpected rest: {rest:02x?}");
+        }
 
+        let location = Location {
+            x: i32_mils_to_nm(i32::from(location_x))?,
+            y: i32_mils_to_nm(i32::from(location_y))?,
+        };
         let retval = Self {
+            formal_type: *formal_type,
             owner_index: 0,
             owner_part_id: 0,
             description: description.into(),
             designator: designator.into(),
             name: name.into(),
-            location_x: i32::from(location_x),
-            location_y: i32::from(location_y),
-            length: u32::from(length),
+            location,
+            length: u32_mils_to_nm(u32::from(length))?,
             // location_x: i32::from(location_x) * 10,
             // location_y: i32::from(location_y) * 10,
             // length: u32::from(length) * 10,
             designator_vis: des_vis,
             name_vis,
             rotation,
+            ..Default::default()
         };
 
         Ok(SchRecord::Pin(retval))
@@ -82,25 +106,20 @@ impl SchPin {
 
     /// Nonconnecting point of this pin
     pub(crate) fn location(&self) -> Location {
-        Location {
-            x: self.location_x,
-            y: self.location_y,
-        }
+        self.location
     }
 
     /// Altium stores the position of the pin at its non-connecting end. Which
     /// seems dumb. This provides the connecting end.
     pub(crate) fn location_conn(&self) -> Location {
-        let (x_orig, y_orig, len) = (
-            self.location_x,
-            self.location_y,
-            i32::try_from(self.length).unwrap(),
-        );
+        let orig = self.location;
+        let len = i32::try_from(self.length).unwrap();
+
         let (x, y) = match self.rotation {
-            Rotation::R0 => (x_orig + len, y_orig),
-            Rotation::R90 => (x_orig, y_orig - len),
-            Rotation::R180 => (x_orig - len, y_orig),
-            Rotation::R270 => (x_orig, y_orig + len),
+            Rotation::R0 => (orig.x + len, orig.y),
+            Rotation::R90 => (orig.x, orig.y + len),
+            Rotation::R180 => (orig.x - len, orig.y),
+            Rotation::R270 => (orig.x, orig.y - len),
         };
         Location { x, y }
     }
@@ -153,8 +172,43 @@ fn get_rotation_and_hiding(val: u8) -> (Rotation, Visibility, Visibility) {
     (rotation, des_vis, name_vis)
 }
 
-fn _print_buf(buf: &[u8], s: &str) {
-    println!("pin buf at {s}: {buf:02x?}");
+#[repr(u8)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
+pub enum ElectricalType {
+    #[default]
+    Input = 0,
+    Id = 1,
+    Output = 2,
+    OpenCollector = 3,
+    Passive = 4,
+    HighZ = 5,
+    OpenEmitter = 6,
+    Power = 7,
+}
+
+impl FromUtf8<'_> for ElectricalType {
+    fn from_utf8(buf: &[u8]) -> Result<Self, ErrorKind> {
+        let num: u8 = buf.parse_as_utf8()?;
+        num.try_into()
+    }
+}
+
+impl TryFrom<u8> for ElectricalType {
+    type Error = ErrorKind;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            x if x == Self::Input as u8 => Ok(Self::Input),
+            x if x == Self::Id as u8 => Ok(Self::Id),
+            x if x == Self::Output as u8 => Ok(Self::Output),
+            x if x == Self::OpenCollector as u8 => Ok(Self::OpenCollector),
+            x if x == Self::Passive as u8 => Ok(Self::Passive),
+            x if x == Self::HighZ as u8 => Ok(Self::HighZ),
+            x if x == Self::OpenEmitter as u8 => Ok(Self::OpenEmitter),
+            x if x == Self::Power as u8 => Ok(Self::Power),
+            _ => Err(ErrorKind::ElectricalType(value)),
+        }
+    }
 }
 
 /// Errors related specifically to pin parsing
