@@ -5,6 +5,7 @@ use std::str::{self, Utf8Error};
 
 use altium_macros::FromRecord;
 use log::warn;
+use serde::{Deserialize, Serialize};
 
 use super::SchRecord;
 use crate::common::{mils_to_nm, Location, Rotation90, Visibility};
@@ -18,7 +19,7 @@ use crate::{ErrorKind, Result, UniqueId};
 /// Altium stores pins as binary in the schematic libraries but text in the
 /// schematic documents, so we need to parse both.
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 2, record_variant = Pin)]
 pub struct SchPin {
     pub(super) formal_type: u8,
@@ -77,7 +78,7 @@ impl SchPin {
         let (name, rest) = sized_buf_to_utf8(rest, "name")?;
         let (designator, rest) = sized_buf_to_utf8(rest, "designator")?;
 
-        if !matches!(rest, [_, 0x03, b'|', b'&', b'|']) {
+        if !matches!(rest, [_, 0x03, b'|', b'&', b'|'] | [0x0, 0x0]) {
             warn!("unexpected rest: {rest:02x?}");
         }
 
@@ -175,7 +176,7 @@ fn get_rotation_and_hiding(val: u8) -> (Rotation90, Visibility, Visibility) {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ElectricalType {
     #[default]
     Input = 0,

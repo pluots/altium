@@ -5,6 +5,23 @@
 #![allow(clippy::too_many_lines)]
 #![allow(clippy::cast_precision_loss)]
 
+#[allow(unused_macros)]
+macro_rules! do_once {
+    ($($tt:tt)*) => {{
+        static DONE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+        if !DONE.swap(true, std::sync::atomic::Ordering::Relaxed) {
+            $($tt)*
+        }
+    }}
+}
+
+#[allow(unused_macros)]
+macro_rules! println_once {
+    ($($tt:tt)*) => {
+        do_once!(println!($($tt:tt)*))
+    }
+}
+
 mod app;
 mod backend;
 mod draw;

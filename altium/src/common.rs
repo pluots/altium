@@ -1,6 +1,7 @@
 use std::{fmt, str};
 
 use num_traits::CheckedMul;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::{AddContext, ErrorKind, Result, TruncBuf};
@@ -11,7 +12,7 @@ const SEP: u8 = b'|';
 const KV_SEP: u8 = b'=';
 
 /// Common coordinate type with x and y positions in nnaometers.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Location {
     // These are nonpublic because we might want to combine `Location` and `LocationFract`
     pub(crate) x: i32,
@@ -19,7 +20,7 @@ pub struct Location {
 }
 
 /// Location with fraction
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct LocationFract {
     pub x: i32,
     pub x_fract: i32,
@@ -60,6 +61,17 @@ impl Location {
     }
 }
 
+impl LocationFract {
+    /// Sometimes we don't want to deal with fractions
+    #[inline]
+    pub fn as_location(self) -> Location {
+        Location {
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+
 impl From<(i32, i32)> for Location {
     fn from(value: (i32, i32)) -> Self {
         Self {
@@ -69,7 +81,7 @@ impl From<(i32, i32)> for Location {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub enum Visibility {
     Hidden,
     #[default]
@@ -86,9 +98,11 @@ impl FromUtf8<'_> for Visibility {
 ///
 /// Every entity in Altium has a unique ID including files, library items, and records.
 // TODO: figure out what file types use this exact format
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum UniqueId {
     /// Altium's old style string unique ID
+    #[serde(with = "unique_id_serde")]
     Simple([u8; 8]),
     /// UUID style, used by some newer files
     Uuid(Uuid),
@@ -139,6 +153,23 @@ impl FromUtf8<'_> for UniqueId {
     }
 }
 
+mod unique_id_serde {
+    use serde::{de::Error, Deserialize, Deserializer, Serializer};
+
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn serialize<S: Serializer>(val: &[u8; 8], serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(std::str::from_utf8(val).unwrap())
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<[u8; 8], D::Error> {
+        // let s = <String>::deserialize(deserializer);
+        let s: &str = Deserialize::deserialize(deserializer)?;
+        s.as_bytes()
+            .try_into()
+            .map_err(|_| D::Error::custom(format!("expected a 8-byte unique ID; got '{s}'")))
+    }
+}
+
 /// Altium uses the format `Key1=Val1|Key2=Val2...`, this handles that
 pub fn split_altium_map(buf: &[u8]) -> impl Iterator<Item = (&[u8], &[u8])> {
     buf.split(|b| *b == SEP).filter(|x| !x.is_empty()).map(|x| {
@@ -169,7 +200,7 @@ pub fn str_from_utf8(buf: &[u8]) -> Result<&str, ErrorKind> {
 }
 
 /// RGB color
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Rgb {
     pub r: u8,
     pub g: u8,
@@ -230,7 +261,7 @@ impl FromUtf8<'_> for Rgb {
 }
 
 /// Rotation when only 4 values are allowed
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Rotation90 {
     #[default]
     R0 = 0,
@@ -256,7 +287,7 @@ impl FromUtf8<'_> for Rotation90 {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub enum ReadOnlyState {
     #[default]
     ReadWrite,

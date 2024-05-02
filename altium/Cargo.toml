@@ -22,11 +22,11 @@ num_enum = "0.7.2"
 quick-xml = "0.31.0"
 regex = "1.10.4"
 rust-ini = "0.21.0"
-serde = "1.0.200"
+serde = { version = "1.0.200", features = ["derive"] }
 serde-xml-rs = "0.6.0"
 svg = "0.17.0"
 uom = "0.36.0"
-uuid = { version = "1.8.0", features = ["v1", "v4", "fast-rng"]}
+uuid = { version = "1.8.0", features = ["v1", "v4", "fast-rng", "serde"]}
 xml-rs = "0.8.20"
 
 [dev-dependencies]

@@ -186,8 +186,8 @@ impl Draw for record::PolyLine {
             let &[a, b] = window else { unreachable!() };
 
             canvas.draw_line(DrawLine {
-                start: a,
-                end: b,
+                start: a.as_location(),
+                end: b.as_location(),
                 color: self.color,
                 width: self.line_width * 4,
                 ..Default::default()
