@@ -58,6 +58,7 @@ use std::str;
 use altium_macros::FromRecord;
 pub use draw::SchDrawCtx;
 pub(super) use parse::parse_all_records;
+use serde::{Deserialize, Serialize};
 
 use super::params::Justification;
 use super::pin::SchPin;
@@ -77,7 +78,7 @@ use crate::{
 /// representation whereas others are just metadata. Each variant represents a record
 /// type.
 #[non_exhaustive]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum SchRecord {
     Undefined,
     MetaData(Box<MetaData>),
@@ -116,6 +117,50 @@ pub enum SchRecord {
     Implementation(Implementation),
     ImplementationChild1(ImplementationChild1),
     ImplementationChild2(ImplementationChild2),
+}
+
+impl SchRecord {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Undefined => "Undefined",
+            Self::MetaData(_) => "MetaData",
+            Self::Pin(_) => "Pin",
+            Self::IeeeSymbol(_) => "IeeeSymbol",
+            Self::Label(_) => "Label",
+            Self::Bezier(_) => "Bezier",
+            Self::PolyLine(_) => "PolyLine",
+            Self::Polygon(_) => "Polygon",
+            Self::Ellipse(_) => "Ellipse",
+            Self::Piechart(_) => "Piechart",
+            Self::RectangleRounded(_) => "RectangleRounded",
+            Self::ElipticalArc(_) => "ElipticalArc",
+            Self::Arc(_) => "Arc",
+            Self::Line(_) => "Line",
+            Self::Rectangle(_) => "Rectangle",
+            Self::SheetSymbol(_) => "SheetSymbol",
+            Self::SheetEntry(_) => "SheetEntry",
+            Self::PowerPort(_) => "PowerPort",
+            Self::Port(_) => "Port",
+            Self::NoErc(_) => "NoErc",
+            Self::NetLabel(_) => "NetLabel",
+            Self::Bus(_) => "Bus",
+            Self::Wire(_) => "Wire",
+            Self::TextFrame(_) => "TextFrame",
+            Self::Junction(_) => "Junction",
+            Self::Image(_) => "Image",
+            Self::Sheet(_) => "Sheet",
+            Self::SheetName(_) => "SheetName",
+            Self::FileName(_) => "FileName",
+            Self::Designator(_) => "Designator",
+            Self::BusEntry(_) => "BusEntry",
+            Self::Template(_) => "Template",
+            Self::Parameter(_) => "Parameter",
+            Self::ImplementationList(_) => "ImplementationList",
+            Self::Implementation(_) => "Implementation",
+            Self::ImplementationChild1(_) => "ImplementationChild1",
+            Self::ImplementationChild2(_) => "ImplementationChild2",
+        }
+    }
 }
 
 /// Try all known record types (excludes binary pins)
@@ -178,7 +223,7 @@ pub fn parse_any_record(buf: &[u8]) -> Result<SchRecord, Error> {
 
 /// Component metadata (AKA "Component")
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 1, use_box = true)]
 pub struct MetaData {
     all_pin_count: u32,
@@ -209,7 +254,7 @@ pub struct MetaData {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 3)]
 pub struct IeeeSymbol {
     is_not_accessible: bool,
@@ -219,7 +264,7 @@ pub struct IeeeSymbol {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 4)]
 pub struct Label {
     pub color: Rgb,
@@ -227,7 +272,8 @@ pub struct Label {
     index_in_sheet: i16,
     is_not_accessible: bool,
     is_mirrored: bool,
-    pub location: Location,
+    pub location: LocationFract,
+    orientation: i32,
     owner_index: u8,
     owner_part_id: i8,
     text: Box<str>,
@@ -236,7 +282,7 @@ pub struct Label {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 5)]
 pub struct Bezier {
     color: Rgb,
@@ -253,7 +299,7 @@ pub struct Bezier {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 6)]
 pub struct PolyLine {
     owner_index: u8,
@@ -264,12 +310,12 @@ pub struct PolyLine {
     line_width: u32,
     pub color: Rgb,
     #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
-    pub locations: Vec<Location>,
+    pub locations: Vec<LocationFract>,
     pub unique_id: UniqueId,
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 7)]
 pub struct Polygon {
     pub area_color: Rgb,
@@ -288,7 +334,7 @@ pub struct Polygon {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 8)]
 pub struct Ellipse {
     pub area_color: Rgb,
@@ -308,7 +354,7 @@ pub struct Ellipse {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 9)]
 pub struct Piechart {
     owner_index: u8,
@@ -316,7 +362,7 @@ pub struct Piechart {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 10)]
 pub struct RectangleRounded {
     pub area_color: Rgb,
@@ -338,7 +384,7 @@ pub struct RectangleRounded {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 11)]
 pub struct ElipticalArc {
     owner_index: u8,
@@ -359,14 +405,14 @@ pub struct ElipticalArc {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 12)]
 pub struct Arc {
     owner_index: u8,
     owner_part_id: i8,
     is_not_accessible: bool,
     index_in_sheet: i16,
-    pub location: Location,
+    pub location: LocationFract,
     radius: i8,
     radius_frac: i32,
     secondary_radius: i8,
@@ -380,7 +426,7 @@ pub struct Arc {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 13)]
 pub struct Line {
     pub color: Rgb,
@@ -401,20 +447,20 @@ pub struct Line {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 14)]
 pub struct Rectangle {
     pub area_color: Rgb,
     pub color: Rgb,
     /// Top right corner
-    pub corner: Location,
+    pub corner: LocationFract,
     index_in_sheet: i16,
     is_not_accessible: bool,
     pub is_solid: bool,
     #[from_record(convert = mils_to_nm)]
     line_width: u32,
     /// Bottom left corner
-    pub location: Location,
+    pub location: LocationFract,
     owner_index: u8,
     owner_part_id: i8,
     owner_part_display_mode: i8,
@@ -423,7 +469,7 @@ pub struct Rectangle {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 15)]
 pub struct SheetSymbol {
     owner_index: u8,
@@ -446,7 +492,7 @@ pub struct SheetSymbol {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 16)]
 pub struct SheetEntry {
     owner_index: u8,
@@ -467,7 +513,7 @@ pub struct SheetEntry {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 17)]
 pub struct PowerPort {
     owner_index: u8,
@@ -485,7 +531,7 @@ pub struct PowerPort {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 18)]
 pub struct Port {
     alignment: u16,
@@ -507,7 +553,7 @@ pub struct Port {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 22)]
 pub struct NoErc {
     owner_index: u8,
@@ -523,7 +569,7 @@ pub struct NoErc {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 25)]
 pub struct NetLabel {
     owner_index: u8,
@@ -537,7 +583,7 @@ pub struct NetLabel {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 26)]
 pub struct Bus {
     owner_index: u8,
@@ -552,7 +598,7 @@ pub struct Bus {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 27)]
 pub struct Wire {
     owner_index: u8,
@@ -567,7 +613,7 @@ pub struct Wire {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 28)]
 pub struct TextFrame {
     location: LocationFract,
@@ -585,7 +631,7 @@ pub struct TextFrame {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 29)]
 pub struct Junction {
     owner_index: u8,
@@ -593,7 +639,7 @@ pub struct Junction {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 30)]
 pub struct Image {
     owner_index: u8,
@@ -611,7 +657,7 @@ pub struct Image {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 31)]
 pub struct Sheet {
     owner_index: u8,
@@ -645,7 +691,7 @@ pub struct Sheet {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 32)]
 pub struct SheetName {
     owner_index: u8,
@@ -659,7 +705,7 @@ pub struct SheetName {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 33)]
 pub struct FileName {
     owner_index: u8,
@@ -673,7 +719,7 @@ pub struct FileName {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 34)]
 pub struct Designator {
     owner_index: u8,
@@ -690,7 +736,7 @@ pub struct Designator {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 37)]
 pub struct BusEntry {
     owner_index: u8,
@@ -698,7 +744,7 @@ pub struct BusEntry {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 39)]
 pub struct Template {
     owner_index: u8,
@@ -708,7 +754,7 @@ pub struct Template {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 41)]
 pub struct Parameter {
     owner_index: u8,
@@ -725,7 +771,7 @@ pub struct Parameter {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 44)]
 pub struct ImplementationList {
     owner_index: u8,
@@ -734,7 +780,7 @@ pub struct ImplementationList {
 
 /// Things like models, including footprints
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 45)]
 pub struct Implementation {
     owner_index: u8,
@@ -753,7 +799,7 @@ pub struct Implementation {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 46)]
 pub struct ImplementationChild1 {
     owner_index: u8,
@@ -761,7 +807,7 @@ pub struct ImplementationChild1 {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq, FromRecord)]
+#[derive(Clone, Debug, Default, PartialEq, FromRecord, Serialize, Deserialize)]
 #[from_record(id = 48)]
 pub struct ImplementationChild2 {
     owner_index: u8,

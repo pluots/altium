@@ -1,5 +1,7 @@
 //! Parameter types stored in a schematic
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     common::{PosHoriz, PosVert},
     parse::{FromUtf8, ParseUtf8},
@@ -87,7 +89,7 @@ impl FromUtf8<'_> for SheetStyle {
 }
 
 /// Allowed text alignments in a schematic
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub enum Justification {
     #[default]
     BottomLeft = 0,

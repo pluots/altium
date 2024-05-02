@@ -2,6 +2,8 @@
 
 use std::ops::{Deref, DerefMut};
 
+use serde::{Deserialize, Serialize};
+
 lazy_static::lazy_static! {
     pub(crate) static ref DEFAULT_FONT: Font = Font {
         name: "Calibri".into(),
@@ -10,7 +12,7 @@ lazy_static::lazy_static! {
 }
 
 /// A font that is stored in a library
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Font {
     pub(crate) name: Box<str>,
     pub(crate) size: u16,
@@ -41,7 +43,7 @@ impl Default for &Font {
 //
 // Or `Arc<RwLock<BTreeMap<u16, Arc<Font>>>>`. Yucky, but editable (edit the
 // font if you're the only user duplicate it if you're not)
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct FontCollection(Vec<Font>);
 
 impl FontCollection {
