@@ -17,12 +17,12 @@ flate2 = "1.0.30"
 image = { version = "0.25.1", default-features = false, features = ["png", "bmp", "jpeg"] }
 lazy_static = "1.4.0"
 log = "0.4.21"
-num-traits = "0.2.18"
+num-traits = "0.2.19"
 num_enum = "0.7.2"
 quick-xml = "0.31.0"
 regex = "1.10.4"
 rust-ini = "0.21.0"
-serde = { version = "1.0.200", features = ["derive"] }
+serde = { version = "1.0.203", features = ["derive"] }
 serde-xml-rs = "0.6.0"
 svg = "0.17.0"
 uom = "0.36.0"
