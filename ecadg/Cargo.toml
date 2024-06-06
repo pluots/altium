@@ -12,11 +12,12 @@ egui_dock = "0.12.0"
 egui_extras = "0.27.2"
 egui_plot = "0.27.2"
 log = "0.4.21"
-serde = "1.0.200"
+serde = "1.0.203"
 rfd = "0.14.1"
 regex = "1.10.4"
-bytemuck = "1.15.0"
+bytemuck = "1.16.0"
 lyon = "1.0.1"
+glyphon = "0.5.0"
 
 [dependencies.eframe]
 version = "0.27.2"
@@ -42,6 +43,6 @@ env_logger = "0.11"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
 
-# Optimize all dependencies even in debug builds:
+# # Optimize all dependencies even in debug builds:
 # [profile.dev.package."*"]
 # opt-level = 2

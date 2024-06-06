@@ -1,7 +1,7 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use std::{error::Error, path::PathBuf};
+use std::{env, error::Error, path::PathBuf, process::exit};
 
 use ecadg::open_file_sync_err;
 
@@ -49,11 +49,29 @@ fn main() {
     });
 }
 
+const USAGE: &str = "ecadg
+eCAD file viewer.
+
+Usage:
+
+    ecadg [files]
+
+All files provided as arguments will be open.
+";
+
 fn parse_args() -> Result<(), Box<dyn Error>> {
-    // Allow passing files as arguments
-    for fname in std::env::args_os().skip(1) {
-        let path: PathBuf = fname.into();
+    for arg in env::args_os() {
+        if arg == "-h" || arg == "--help" {
+            println!("{USAGE}");
+            exit(0);
+        }
+    }
+
+    // Any remaining arguments get opened as files
+    for arg in env::args_os().skip(1).rev() {
+        let path: PathBuf = arg.into();
         open_file_sync_err(path)?;
     }
+
     Ok(())
 }

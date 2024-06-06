@@ -1,7 +1,9 @@
 use std::sync::Arc;
 use std::{path::PathBuf, sync::atomic::Ordering::SeqCst};
 
+use altium::sch::SchRecord;
 use egui::{ScrollArea, TextStyle, Ui};
+use egui_extras::{Column, TableBuilder};
 use log::debug;
 
 use crate::backend::{
@@ -53,33 +55,9 @@ impl GuiApp {
 
         GuiApp::default()
     }
-}
 
-impl eframe::App for GuiApp {
-    /// Called by the frame work to save state before shutdown.
-    fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
-    }
-
-    /// Called each time the UI needs repainting, which may be many times per second.
-    /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-    #[allow(clippy::too_many_lines)]
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if HAS_FRESH_DATA.load(SeqCst) {
-            // If there is fresh data, grab it
-            GlobalQueue::drain(&mut self.tabs, &mut self.recent_files, &mut self.errors);
-            // dbg!(&self.errors);
-            // FIXME: deduplicate stored tabs based on path
-        }
-
-        // If no tab is selected, select the first one
-        if self.active_tab.is_none() && !self.tabs.is_empty() {
-            self.active_tab = Some(0);
-        } else if self.tabs.is_empty() {
-            self.active_tab = None;
-        }
-
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+    fn show(&mut self, ui: &mut egui::Ui) {
+        egui::TopBottomPanel::top("top_panel").show_inside(ui, |ui| {
             // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
@@ -100,13 +78,13 @@ impl eframe::App for GuiApp {
 
                     #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
                     if ui.button("Quit").clicked() {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                 });
             });
         });
 
-        egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
+        egui::TopBottomPanel::bottom("bottom_panel").show_inside(ui, |ui| {
             // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
                 ui.vertical_centered(|ui| {
@@ -115,9 +93,59 @@ impl eframe::App for GuiApp {
             });
         });
 
-        egui::SidePanel::left("left_panel").show(ctx, |ui| make_left_panel(self, ui));
+        let full_width = ui.ctx().available_rect().width();
+        egui::SidePanel::left("left_panel")
+            .resizable(true)
+            .default_width((full_width * 0.20).min(300.0))
+            .min_width((full_width * 0.10).min(300.0))
+            .max_width(full_width * 0.75)
+            .show_inside(ui, |ui| {
+                make_left_panel(self, ui);
+                // Add a dummmy component that takes up space so we can resize the element
+                ui.allocate_space(ui.available_size());
+            });
 
-        egui::CentralPanel::default().show(ctx, |ui| make_center_panel(self, ui));
+        egui::SidePanel::right("right_panel")
+            .resizable(true)
+            .default_width((full_width * 0.20).min(300.0))
+            .min_width((full_width * 0.10).min(300.0))
+            .max_width(full_width * 0.75)
+            .show_inside(ui, |ui| {
+                // .show(ctx, |ui| {
+                make_right_panel(self, ui);
+                // Add a dummmy component that takes up space so we can resize the element
+                ui.allocate_space(ui.available_size());
+            });
+
+        egui::CentralPanel::default().show_inside(ui, |ui| make_center_panel(self, ui));
+    }
+}
+
+impl eframe::App for GuiApp {
+    /// Called by the frame work to save state before shutdown.
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, eframe::APP_KEY, self);
+    }
+
+    /// Called each time the UI needs repainting, which may be many times per second.
+    /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
+    #[allow(clippy::too_many_lines)]
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if HAS_FRESH_DATA.load(SeqCst) {
+            // If there is fresh data, grab it
+            GlobalQueue::drain(&mut self.tabs, &mut self.recent_files, &mut self.errors);
+            // FIXME: deduplicate stored tabs based on path
+        }
+
+        // If no tab is selected, select the first one
+        if self.active_tab.is_none() && !self.tabs.is_empty() {
+            self.active_tab = Some(0);
+        } else if self.tabs.is_empty() {
+            self.active_tab = None;
+        }
+
+        // Unsure why but things seem to work better if we have a main `CentraPanel` wrapper.
+        egui::CentralPanel::default().show(ctx, |ui| self.show(ui));
 
         if false {
             egui::Window::new("Window").show(ctx, |ui| {
@@ -147,8 +175,6 @@ fn make_left_panel(app: &mut GuiApp, ui: &mut Ui) {
     for error in &app.errors {
         ui.label(error);
     }
-
-    egui::warn_if_debug_build(ui);
 }
 
 fn make_left_panel_schlib(ui: &mut Ui, tab: &mut SchLibTab) {
@@ -175,8 +201,8 @@ fn make_left_panel_schlib(ui: &mut Ui, tab: &mut SchLibTab) {
                     continue;
                 }
                 ui.selectable_value(
-                    &mut tab.active_component,
-                    row_idx,
+                    &mut tab.active_component_idx,
+                    Some(row_idx),
                     tab.components[row_idx].name(),
                 );
                 // ui.label(tab.components[row].name());
@@ -231,19 +257,94 @@ fn make_center_panel(app: &mut GuiApp, ui: &mut Ui) {
 
 #[allow(clippy::needless_pass_by_ref_mut)]
 fn make_center_panel_schlib(ui: &mut Ui, rect: egui::Rect, tab: &SchLibTab, vs: &ViewState) {
-    let comp = Arc::clone(&tab.components[tab.active_component]);
+    let Some(comp) = tab.active_component() else {
+        ui.label("no component selected");
+        return;
+    };
+
     ui.label(format!("rect: {rect:?}, vs: {vs:?}"));
     egui::Frame::canvas(ui.style()).show(ui, |ui| {
         ui.painter()
-            .add(crate::gfx::SchLibCallback::callback(comp, vs))
+            .add(crate::gfx::SchLibCallback::callback(Arc::clone(comp), vs))
     });
 }
 
 #[allow(clippy::needless_pass_by_ref_mut)]
-fn make_center_panel_schdoc(
-    _ui: &mut Ui,
-    _rect: egui::Rect,
-    _tab: &mut SchDocTab,
-    _vs: &mut ViewState,
-) {
+fn make_center_panel_schdoc(ui: &mut Ui, _rect: egui::Rect, tab: &SchDocTab, vs: &mut ViewState) {
+    egui::Frame::canvas(ui.style()).show(ui, |ui| {
+        ui.painter()
+            .add(crate::gfx::SchDocCallback::callback(tab, vs))
+    });
+}
+
+fn make_right_panel(app: &mut GuiApp, ui: &mut Ui) {
+    ui.heading("Right Panel");
+
+    if let Some(tab_idx) = app.active_tab {
+        let tab = &mut app.tabs[tab_idx];
+
+        match &mut tab.inner {
+            TabDataInner::SchLib(tab) => make_right_panel_schlib(ui, tab),
+            TabDataInner::SchDoc(tab) => make_right_panel_schdoc(ui, tab),
+        }
+    }
+
+    ui.heading("errors");
+
+    for error in &app.errors {
+        ui.label(error);
+    }
+}
+#[allow(clippy::needless_pass_by_ref_mut)]
+fn make_right_panel_schdoc(ui: &mut Ui, tab: &SchDocTab) {
+    record_table(ui, &tab.records);
+}
+
+#[allow(clippy::needless_pass_by_ref_mut)]
+fn make_right_panel_schlib(ui: &mut Ui, tab: &SchLibTab) {
+    let Some(comp) = tab.active_component() else {
+        return;
+    };
+
+    record_table(ui, comp.records());
+}
+
+fn record_table(ui: &mut Ui, records: &[SchRecord]) {
+    let mut records: Vec<&SchRecord> = records.iter().collect();
+    records.sort_unstable_by_key(|v| v.name());
+
+    ScrollArea::horizontal()
+        .auto_shrink([false; 2])
+        .show(ui, |ui| {
+            TableBuilder::new(ui)
+                .striped(true)
+                .column(Column::initial(40.0))
+                .column(Column::auto().resizable(true))
+                .column(Column::initial(8000.0).at_least(1000.0).clip(true))
+                .header(20.0, |mut header| {
+                    header.col(|_ui| {});
+                    header.col(|ui| {
+                        ui.heading("Type");
+                    });
+                    header.col(|ui| {
+                        ui.heading("Record");
+                    });
+                })
+                .body(|body| {
+                    body.rows(18.0 * 2.0, records.len(), |mut row| {
+                        let row_index = row.index();
+                        let rec = records[row_index];
+
+                        row.col(|ui| {
+                            ui.label(format!("{row_index}"));
+                        });
+                        row.col(|ui| {
+                            ui.label(rec.name());
+                        });
+                        row.col(|ui| {
+                            ui.label(format!("{rec:?}"));
+                        });
+                    });
+                });
+        });
 }

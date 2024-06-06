@@ -11,7 +11,7 @@ use crate::parse::{FromUtf8, ParseUtf8};
 const SEP: u8 = b'|';
 const KV_SEP: u8 = b'=';
 
-/// Common coordinate type with x and y positions in nnaometers.
+/// Common coordinate type with x and y positions in nanometers.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Location {
     // These are nonpublic because we might want to combine `Location` and `LocationFract`
@@ -28,6 +28,7 @@ pub struct LocationFract {
     pub y_fract: i32,
 }
 
+#[allow(clippy::cast_precision_loss)]
 impl Location {
     #[inline]
     pub fn x(self) -> i32 {
@@ -37,6 +38,16 @@ impl Location {
     #[inline]
     pub fn y(self) -> i32 {
         self.y
+    }
+
+    #[inline]
+    pub fn x_f32(self) -> f32 {
+        self.x as f32
+    }
+
+    #[inline]
+    pub fn y_f32(self) -> f32 {
+        self.y as f32
     }
 
     #[must_use]

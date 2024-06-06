@@ -290,7 +290,7 @@ pub struct Bezier {
     is_not_accessible: bool,
     #[from_record(convert = mils_to_nm)]
     line_width: u32,
-    #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
+    #[from_record(array_map = (X -> x, Y -> y), count = b"LocationCount", convert = mils_to_nm)]
     pub locations: Vec<Location>,
     owner_index: u8,
     owner_part_id: i8,
@@ -309,7 +309,7 @@ pub struct PolyLine {
     #[from_record(convert = mils_to_nm)]
     line_width: u32,
     pub color: Rgb,
-    #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
+    #[from_record(array_map = (X -> x, Y -> y), count = b"LocationCount", convert = mils_to_nm)]
     pub locations: Vec<LocationFract>,
     pub unique_id: UniqueId,
 }
@@ -325,7 +325,7 @@ pub struct Polygon {
     is_solid: bool,
     #[from_record(convert = mils_to_nm)]
     line_width: u32,
-    #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
+    #[from_record(array_map = (X -> x, Y -> y), count = b"LocationCount", convert = mils_to_nm)]
     pub locations: Vec<Location>,
     owner_index: u8,
     owner_part_id: i8,
@@ -392,12 +392,14 @@ pub struct ElipticalArc {
     is_not_accessible: bool,
     index_in_sheet: i16,
     location: LocationFract,
-    radius: i8,
-    radius_frac: i32,
-    secondary_radius: i8,
-    secondary_radius_frac: i32,
     #[from_record(convert = mils_to_nm)]
-    line_width: i32,
+    radius: u32,
+    radius_frac: u32,
+    #[from_record(convert = mils_to_nm)]
+    secondary_radius: u32,
+    secondary_radius_frac: u32,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     start_angle: f32,
     end_angle: f32,
     pub color: Rgb,
@@ -413,12 +415,14 @@ pub struct Arc {
     is_not_accessible: bool,
     index_in_sheet: i16,
     pub location: LocationFract,
-    radius: i8,
-    radius_frac: i32,
-    secondary_radius: i8,
-    secondary_radius_frac: i32,
     #[from_record(convert = mils_to_nm)]
-    line_width: i32,
+    radius: u32,
+    radius_frac: u32,
+    #[from_record(convert = mils_to_nm)]
+    secondary_radius: u32,
+    secondary_radius_frac: u32,
+    #[from_record(convert = mils_to_nm)]
+    line_width: u32,
     start_angle: f32,
     end_angle: f32,
     pub color: Rgb,
@@ -483,7 +487,9 @@ pub struct SheetSymbol {
     pub location: Location,
     symbol_type: Box<str>,
     show_net_name: bool,
+    #[from_record(convert = mils_to_nm)]
     x_size: i32,
+    #[from_record(convert = mils_to_nm)]
     y_size: i32,
     orientation: i32,
     font_id: u16,
@@ -592,7 +598,7 @@ pub struct Bus {
     #[from_record(convert = mils_to_nm)]
     line_width: u32,
     pub color: Rgb,
-    #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
+    #[from_record(array_map = (X -> x, Y -> y), count = b"LocationCount", convert = mils_to_nm)]
     pub locations: Vec<Location>,
     pub unique_id: UniqueId,
 }
@@ -606,7 +612,7 @@ pub struct Wire {
     #[from_record(convert = mils_to_nm)]
     line_width: u32,
     pub color: Rgb,
-    #[from_record(array = true, count = b"LocationCount", map = (X -> x, Y -> y))]
+    #[from_record(array_map = (X -> x, Y -> y), count = b"LocationCount", convert = mils_to_nm)]
     pub locations: Vec<Location>,
     index_in_sheet: i16,
     pub unique_id: UniqueId,
@@ -674,7 +680,7 @@ pub struct Sheet {
     hot_spot_grid_on: bool,
     hot_spot_grid_size: i32,
     system_font: u16,
-    #[from_record(array = true, count = b"FontIdCount", map = (FontName -> name, Size -> size))]
+    #[from_record(array_map = (FontName -> name, Size -> size), count = b"FontIdCount")]
     pub(super) fonts: FontCollection,
     border_on: bool,
     sheet_number_space_size: i32,

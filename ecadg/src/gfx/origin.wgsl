@@ -9,6 +9,7 @@ struct OriginUniformBuf {
 @group(0) @binding(0)
 var<uniform> origin_ctx: OriginUniformBuf;
 
+const ORIGIN_COLOR = vec4<f32>(0.6, 0.6, 0.6, 0.6);
 const HALF_HEIGHT = 0.4;
 const HALF_WIDTH = 0.05;
 
@@ -46,5 +47,5 @@ fn vs_main(
 
 @fragment
 fn fs_main() -> @location(0) vec4<f32> {
-    return vec4<f32>(1.0, 0.0, 1.0, 1.0);
+    return ORIGIN_COLOR;
 }

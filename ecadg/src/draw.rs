@@ -15,7 +15,6 @@ use eframe::egui;
 use egui::{Align2, Color32, RichText, Stroke};
 use egui_plot::{Line, PlotPoint, PlotPoints, PlotUi, Polygon, Text};
 
-#[repr(transparent)]
 pub struct PlotUiWrapper<'a>(pub &'a mut PlotUi);
 
 impl Deref for PlotUiWrapper<'_> {
@@ -33,6 +32,7 @@ impl DerefMut for PlotUiWrapper<'_> {
 }
 
 impl altium::sealed::Sealed for PlotUiWrapper<'_> {}
+
 impl Canvas for PlotUiWrapper<'_> {
     fn draw_text(&mut self, item: DrawText) {
         let txt = RichText::new(item.text).size(f32::from(item.font.size()) * 2.0);
@@ -95,6 +95,10 @@ impl Canvas for PlotUiWrapper<'_> {
     }
 
     fn draw_image(&mut self, _item: DrawImage) {
+        // todo!()
+    }
+
+    fn draw_arc(&mut self, _item: altium::draw::DrawArc) {
         // todo!()
     }
 }

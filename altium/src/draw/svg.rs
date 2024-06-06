@@ -208,6 +208,10 @@ impl Canvas for SvgCtx {
         let cmt = svg::node::Comment::new(comment);
         self.add_node(cmt);
     }
+
+    fn draw_arc(&mut self, _item: super::DrawArc) {
+        // todo!()
+    }
 }
 
 /// Estimate the size of text
