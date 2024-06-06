@@ -1,12 +1,12 @@
 //! Entrypoint for GPU rendering items
 
+mod canvas;
 mod grid;
 mod origin;
 mod poly;
 mod tessellated;
+mod text;
 mod triangle;
-
-// use std::sync::Arc;
 
 use std::sync::Arc;
 
@@ -36,7 +36,7 @@ pub fn init_graphics(cc: &eframe::CreationContext<'_>) {
             triangle: triangle::TriangleCtx::init(wgpu_render_state, device),
             grid: grid::GridCtx::init(wgpu_render_state, device),
             origin: origin::OriginCtx::init(wgpu_render_state, device),
-            tess: tessellated::TessCtx::init(wgpu_render_state, device),
+            canvas: canvas::CanvasCtx::init(wgpu_render_state, device),
         });
 }
 
@@ -46,7 +46,7 @@ struct GraphicsCtx {
     triangle: triangle::TriangleCtx,
     grid: grid::GridCtx,
     origin: origin::OriginCtx,
-    tess: tessellated::TessCtx,
+    canvas: canvas::CanvasCtx,
 }
 
 /// Callback for drawing schlib items
@@ -69,7 +69,7 @@ impl SchLibCallback {
 impl egui_wgpu::CallbackTrait for SchLibCallback {
     fn prepare(
         &self,
-        _device: &Device,
+        device: &Device,
         queue: &Queue,
         _desc: &egui_wgpu::ScreenDescriptor,
         _encoder: &mut CommandEncoder,
@@ -78,8 +78,8 @@ impl egui_wgpu::CallbackTrait for SchLibCallback {
         let ctx: &mut GraphicsCtx = resources.get_mut().unwrap();
 
         ctx.grid.prepare(queue, self.view_state);
-        ctx.tess
-            .prepare(queue, self.view_state, self.comp.as_ref(), &());
+        ctx.canvas
+            .prepare(device, queue, self.view_state, self.comp.as_ref(), &());
         ctx.origin.prepare(queue, self.view_state);
 
         Vec::new()
@@ -94,7 +94,7 @@ impl egui_wgpu::CallbackTrait for SchLibCallback {
         let ctx: &GraphicsCtx = resources.get().unwrap();
 
         ctx.grid.paint(render_pass, self.view_state);
-        ctx.tess.paint(render_pass, self.view_state);
+        ctx.canvas.paint(render_pass, self.view_state);
         ctx.origin.paint(render_pass, self.view_state);
     }
 }
@@ -125,7 +125,7 @@ impl SchDocCallback {
 impl egui_wgpu::CallbackTrait for SchDocCallback {
     fn prepare(
         &self,
-        _device: &Device,
+        device: &Device,
         queue: &Queue,
         _desc: &egui_wgpu::ScreenDescriptor,
         _encoder: &mut CommandEncoder,
@@ -140,8 +140,13 @@ impl egui_wgpu::CallbackTrait for SchDocCallback {
         };
 
         ctx.grid.prepare(queue, self.view_state);
-        ctx.tess
-            .prepare(queue, self.view_state, &self.records.as_ref(), &sch_ctx);
+        ctx.canvas.prepare(
+            device,
+            queue,
+            self.view_state,
+            &self.records.as_ref(),
+            &sch_ctx,
+        );
         ctx.origin.prepare(queue, self.view_state);
 
         Vec::new()
@@ -156,7 +161,7 @@ impl egui_wgpu::CallbackTrait for SchDocCallback {
         let ctx: &GraphicsCtx = resources.get().unwrap();
 
         ctx.grid.paint(render_pass, self.view_state);
-        ctx.tess.paint(render_pass, self.view_state);
+        ctx.canvas.paint(render_pass, self.view_state);
         ctx.origin.paint(render_pass, self.view_state);
     }
 }
