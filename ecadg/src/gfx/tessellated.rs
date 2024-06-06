@@ -28,6 +28,7 @@ use lyon::{
     },
 };
 
+use super::text::TextCtx;
 // use wgpu::util::DeviceExt;
 use crate::backend::{loc_to_p2d, v_to_p2d, ViewState, M_PER_NM, NM_PER_M};
 
@@ -334,21 +335,15 @@ impl TessCtx {
         self.render_fill() || self.render_stroke()
     }
 
-    /// Set up buffers to be ready to draw
-    pub fn prepare<D: Draw>(
-        &mut self,
-        queue: &Queue,
-        vs: ViewState,
-        item: &D,
-        item_ctx: &D::Context<'_>,
-    ) {
-        self.view_state = vs;
-        self.fill_geometry.vertices.clear();
-        self.fill_geometry.indices.clear();
-        self.stroke_geometry.vertices.clear();
-        self.stroke_geometry.indices.clear();
+    /// Clear the buffers for redraw. Must be called before calling [`prepare`]!
+    pub fn clear(&mut self) {
+        self.fill_geometry.clear();
+        self.stroke_geometry.clear();
+    }
 
-        item.draw(self, item_ctx);
+    /// Set up buffers to be ready to draw
+    pub fn prepare(&mut self, queue: &Queue, vs: ViewState) {
+        self.view_state = vs;
 
         if !self.needs_render() {
             debug!("skipping tessellation prepare");
@@ -424,14 +419,9 @@ impl TessCtx {
     }
 }
 
-impl altium::sealed::Sealed for TessCtx {}
-
-impl Canvas for TessCtx {
-    fn draw_text(&mut self, _item: altium::draw::DrawText) {
-        // todo!()
-    }
-
-    fn draw_line(&mut self, item: altium::draw::DrawLine) {
+/// Draw methods
+impl TessCtx {
+    pub fn draw_line(&mut self, item: altium::draw::DrawLine) {
         self.draw_polyline(altium::draw::DrawPolyLine {
             locations: &[item.start, item.end],
             color: item.color,
@@ -442,7 +432,7 @@ impl Canvas for TessCtx {
         });
     }
 
-    fn draw_polyline(&mut self, item: altium::draw::DrawPolyLine) {
+    pub fn draw_polyline(&mut self, item: altium::draw::DrawPolyLine) {
         let mut builder = Path::builder();
         let Some(first) = item.locations.first() else {
             return;
@@ -473,7 +463,7 @@ impl Canvas for TessCtx {
             .unwrap();
     }
 
-    fn draw_arc(&mut self, _item: altium::draw::DrawArc) {
+    pub fn draw_arc(&mut self, _item: altium::draw::DrawArc) {
         // TODO: figure out <https://github.com/nical/lyon/issues/909>
         // let mut builder = Path::builder().with_svg();
         // // builder.move_to(loc_to_p2d(item.center));
@@ -519,7 +509,7 @@ impl Canvas for TessCtx {
         //     .unwrap();
     }
 
-    fn draw_polygon(&mut self, item: altium::draw::DrawPolygon) {
+    pub fn draw_polygon(&mut self, item: altium::draw::DrawPolygon) {
         let Some((first_loc, locations)) = item.locations.split_first() else {
             return;
         };
@@ -560,7 +550,7 @@ impl Canvas for TessCtx {
             .unwrap();
     }
 
-    fn draw_rectangle(&mut self, item: altium::draw::DrawRectangle) {
+    pub fn draw_rectangle(&mut self, item: altium::draw::DrawRectangle) {
         let min_x = item.x as f32;
         let min_y = item.y as f32;
         let max_x = min_x + item.width as f32;
@@ -592,10 +582,6 @@ impl Canvas for TessCtx {
                 ),
             )
             .unwrap();
-    }
-
-    fn draw_image(&mut self, _item: altium::draw::DrawImage) {
-        // todo!()
     }
 }
 
