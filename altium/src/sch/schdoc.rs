@@ -15,6 +15,7 @@ use super::{SchDrawCtx, SchRecord};
 use crate::common::split_altium_map;
 use crate::draw::{Canvas, Draw};
 use crate::error::AddContext;
+use crate::font::Font;
 use crate::parse::{extract_sized_buf, BufLenMatch, ParseUtf8};
 use crate::{Error, ErrorKind, UniqueId};
 
@@ -31,6 +32,8 @@ pub struct SchDoc<F> {
     records: Vec<SchRecord>,
     unique_id: UniqueId,
     storage: Arc<Storage>,
+    /// Name of the file, for reference
+    name: Box<str>,
 }
 
 /// Impls that are specific to a file
@@ -38,9 +41,19 @@ impl SchDoc<File> {
     /// Open a file from disk
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let cfile = cfb::open(&path)?;
-        Self::from_cfile(cfile)
+        Self::from_cfile(cfile, path.as_ref().to_string_lossy())
             .context("parsing SchLib")
             .or_context(|| format!("with file {}", path.as_ref().display()))
+    }
+
+    /// Create an iterator over all fonts stored in this library.
+    pub fn fonts(&self) -> impl Iterator<Item = &Font> {
+        self.sheet.fonts.iter()
+    }
+
+    /// Get information about the blob items stored
+    pub fn storage(&self) -> &Arc<Storage> {
+        &self.storage
     }
 }
 
@@ -48,7 +61,7 @@ impl<'a> SchDoc<Cursor<&'a [u8]>> {
     /// Open an in-memory file from a buffer
     pub fn from_buffer(buf: &'a [u8]) -> Result<Self, Error> {
         let cfile = cfb::CompoundFile::open(Cursor::new(buf))?;
-        Self::from_cfile(cfile).context("parsing SchDoc from Cursor")
+        Self::from_cfile(cfile, "buffer").context("parsing SchDoc from Cursor")
     }
 }
 
@@ -64,12 +77,13 @@ impl<F: Read + Seek> SchDoc<F> {
         let ctx = SchDrawCtx {
             storage: &self.storage,
             fonts: &self.sheet.fonts,
+            name: &self.name,
         };
         self.records().for_each(|r| r.draw(canvas, &ctx));
     }
 
     /// Create a `SchLib` representation from any `Read`able compound file.
-    fn from_cfile(mut cfile: CompoundFile<F>) -> Result<Self, Error> {
+    fn from_cfile(mut cfile: CompoundFile<F>, name: impl Into<Box<str>>) -> Result<Self, Error> {
         let mut tmp_buf: Vec<u8> = Vec::new(); // scratch memory
 
         let storage = Storage::parse_cfile(&mut cfile, &mut tmp_buf)?;
@@ -102,6 +116,7 @@ impl<F: Read + Seek> SchDoc<F> {
             sheet,
             storage: storage.into(),
             unique_id,
+            name: name.into(),
         })
     }
 }

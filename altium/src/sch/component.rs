@@ -48,6 +48,7 @@ impl Component {
         let ctx = SchDrawCtx {
             fonts: &self.fonts,
             storage: &self.storage,
+            name: &self.name,
         };
 
         for record in &self.records {

@@ -127,7 +127,7 @@ impl<F: Read + Seek> SchLib<F> {
     }
 
     /// Get information about the blob items stored
-    pub fn storage(&self) -> &Storage {
+    pub fn storage(&self) -> &Arc<Storage> {
         &self.storage
     }
 
