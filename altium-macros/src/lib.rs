@@ -120,24 +120,28 @@ fn handle_field(
     // Parse attributes that exist on the field
     let mut field_attr_map = parse_attrs(field.attrs).unwrap_or_default();
 
+    // Convert is always allowed; just applied to all values if used for arrays
+    let convert = match field_attr_map.remove("convert") {
+        Some(conv_fn) => quote! { .map_err(Into::into).and_then(#conv_fn) },
+        None => TokenStream2::new(),
+    };
+
     // Check if we need to parse an array
-    if let Some(arr_val) = field_attr_map.remove("array") {
-        let arr_val_str = arr_val.to_string();
-        if arr_val_str == "true" {
-            let count_ident = field_attr_map
-                .remove("count")
-                .expect("missing 'count' attribute");
+    if let Some(arr_map) = field_attr_map.remove("array_map") {
+        let count_ident = field_attr_map
+            .remove("count")
+            .expect("missing 'count' attribute");
 
-            let arr_map = field_attr_map
-                .remove("map")
-                .expect("missing 'map' attribute");
-
-            process_array(struct_ident, &field_ident, count_ident, arr_map, match_arms);
-            error_if_map_not_empty(&field_attr_map);
-            return;
-        } else if arr_val_str != "false" {
-            panic!("array must be `true` or `false` but got {arr_val_str}");
-        }
+        process_array(
+            struct_ident,
+            &field_ident,
+            count_ident,
+            arr_map,
+            convert,
+            match_arms,
+        );
+        error_if_map_not_empty(&field_attr_map);
+        return;
     }
 
     // We match a single literal, like `OwnerPartId`
@@ -146,11 +150,6 @@ fn handle_field(
         Some(TokenTree::Literal(v)) => v,
         Some(v) => panic!("expected literal, got {v:?}"),
         None => create_key_name(&field_ident),
-    };
-
-    let convert = match field_attr_map.remove("convert") {
-        Some(conv_fn) => quote! { .map_err(Into::into).and_then(#conv_fn) },
-        None => TokenStream2::new(),
     };
 
     // If we haven't consumed all attributes, yell
@@ -327,7 +326,7 @@ fn parse_attr_map(map: TokenTree) -> Vec<(Ident, Ident)> {
 }
 
 fn error_if_map_not_empty(map: &BTreeMap<String, TokenTree>) {
-    assert!(map.is_empty(), "unexpected pairs {map:?}");
+    assert!(map.is_empty(), "unexpected attribute values {map:?}");
 }
 
 /// Handle special cases `Location` and `LocationFrac`.
@@ -389,6 +388,7 @@ fn process_array(
     field_ident: &Ident,
     count_ident_tt: TokenTree,
     arr_map_tt: TokenTree,
+    convert: TokenStream2,
     match_stmts: &mut Vec<TokenStream2>,
 ) {
     let TokenTree::Literal(match_pat) = count_ident_tt else {
@@ -419,13 +419,19 @@ fn process_array(
                     .parse_as_utf8()
                     .or_context(|| format!(
                         "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-                        String::from_utf8_lossy(match_val), #field_name_str, stringify!(#struct_ident)
+                        String::from_utf8_lossy(match_val), #field_name_str,
+                        stringify!(#struct_ident)
                     ))?;
 
-                let parsed_val = val.parse_as_utf8().or_context(|| format!(
-                    "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
-                    String::from_utf8_lossy(match_val), #field_name_str, stringify!(#struct_ident)
-                ))?;
+                    // TODO: scale
+                let parsed_val = val
+                    .parse_as_utf8()
+                    #convert
+                    .or_context(|| format!(
+                        "while extracting `{}` (`{}`) for `{}` (via proc macro array)",
+                        String::from_utf8_lossy(match_val), #field_name_str,
+                        stringify!(#struct_ident)
+                    ))?;
 
                 ret.#field_ident[idx - 1].#assign_value = parsed_val;
             },
