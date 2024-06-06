@@ -94,8 +94,16 @@ impl Component {
     }
 
     /// Iterate over all records in this component
-    pub fn records(&self) -> impl Iterator<Item = &SchRecord> {
-        self.records.iter()
+    pub fn records(&self) -> &[SchRecord] {
+        self.records.as_slice()
+    }
+}
+
+impl Draw for &[SchRecord] {
+    type Context<'a> = SchDrawCtx<'a>;
+
+    fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &Self::Context<'_>) {
+        self.iter().for_each(|r| r.draw(canvas, ctx));
     }
 }
 
@@ -106,7 +114,9 @@ impl Draw for Component {
         let ctx = SchDrawCtx {
             fonts: &self.fonts,
             storage: &self.storage,
+            name: &self.name,
         };
-        self.records.iter().for_each(|r| r.draw(canvas, &ctx));
+
+        self.records.as_slice().draw(canvas, &ctx);
     }
 }
