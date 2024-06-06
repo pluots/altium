@@ -5,8 +5,10 @@ mod svg;
 
 pub use canvas::{
     Canvas,
+    DrawArc,
     DrawImage,
     DrawLine,
+    DrawPolyLine,
     DrawPolygon,
     DrawRectangle,
     DrawText,
