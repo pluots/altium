@@ -200,11 +200,13 @@ impl GridCtx {
                 entry_point: "vs_main",
                 // buffers: &[],
                 buffers: &[GridInstanceBuf::desc()],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
                 entry_point: "fs_main",
                 targets: &[Some(render_state.target_format.into())],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::LineList,

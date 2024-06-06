@@ -262,6 +262,7 @@ impl TessCtx {
                 entry_point: "vs_main",
                 buffers: &[TessVertex::desc()],
                 // buffers: &[TessVertex::desc(), TessVertex::desc()],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -272,6 +273,7 @@ impl TessCtx {
                 //     write_mask: wgpu::ColorWrites::ALL,
                 // })],
                 targets: &[Some(render_state.target_format.into())],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
             primitive: wgpu::PrimitiveState {
                 // topology: wgpu::PrimitiveTopology::LineList,
