@@ -15,8 +15,8 @@ const ORIGIN_LENGTH_PX: f32 = 60.0;
 const ORIGIN_WIDTH_PX: f32 = 2.0;
 
 /// Data of window position used to determine layout
-#[derive(Clone, Copy, Debug, Pod, Zeroable)]
 #[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
 struct OriginUniformBuf {
     /// Offset of the origin from (0, 0), in GPU ranges
     offset: Vec2,

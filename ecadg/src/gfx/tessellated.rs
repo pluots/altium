@@ -9,11 +9,11 @@ use bytemuck::{Pod, Zeroable};
 use eframe::egui_wgpu::{self, wgpu, RenderState};
 use egui::Vec2;
 use egui_wgpu::wgpu::{Device, Queue, RenderPass};
-use log::debug;
+use log::{debug, info};
 use lyon::{
     geom::{euclid::Point2D, Box2D},
-    math::point,
-    path::Path,
+    math::{point, vector, Angle},
+    path::{traits::SvgPathBuilder, Path},
     tessellation::{
         BuffersBuilder,
         FillOptions,
@@ -29,7 +29,7 @@ use lyon::{
 };
 
 // use wgpu::util::DeviceExt;
-use crate::backend::{v_to_p2d, ViewState, M_PER_NM, NM_PER_M};
+use crate::backend::{loc_to_p2d, v_to_p2d, ViewState, M_PER_NM, NM_PER_M};
 
 /// Number of samples for anti-aliasing. Set to 1 to disable
 // TODO
@@ -423,16 +423,36 @@ impl TessCtx {
 }
 
 impl altium::sealed::Sealed for TessCtx {}
+
 impl Canvas for TessCtx {
     fn draw_text(&mut self, _item: altium::draw::DrawText) {
         // todo!()
     }
 
     fn draw_line(&mut self, item: altium::draw::DrawLine) {
+        self.draw_polyline(altium::draw::DrawPolyLine {
+            locations: &[item.start, item.end],
+            color: item.color,
+            width: item.width,
+            start_cap: item.start_cap,
+            end_cap: item.end_cap,
+            line_join: item.line_join,
+        });
+    }
+
+    fn draw_polyline(&mut self, item: altium::draw::DrawPolyLine) {
         let mut builder = Path::builder();
-        builder.begin(point(item.start.x() as f32, item.start.y() as f32));
-        builder.line_to(point(item.end.x() as f32, item.end.y() as f32));
-        builder.close();
+        let Some(first) = item.locations.first() else {
+            return;
+        };
+
+        builder.begin(point(first.x_f32(), first.y_f32()));
+
+        for node in &item.locations[1..] {
+            builder.line_to(point(node.x_f32(), node.y_f32()));
+        }
+
+        builder.end(false);
         let path = builder.build();
 
         self.stroke_tess
@@ -441,7 +461,8 @@ impl Canvas for TessCtx {
                 &STROKE_OPTIONS
                     .with_line_width(item.width as f32)
                     .with_start_cap(item.start_cap.to_lyon_ty())
-                    .with_end_cap(item.end_cap.to_lyon_ty()),
+                    .with_end_cap(item.end_cap.to_lyon_ty())
+                    .with_line_join(item.line_join.to_lyon_ty()),
                 &mut BuffersBuilder::new(
                     &mut self.stroke_geometry,
                     WithColor(item.color.as_float_rgba()),
@@ -450,8 +471,91 @@ impl Canvas for TessCtx {
             .unwrap();
     }
 
-    fn draw_polygon(&mut self, _item: altium::draw::DrawPolygon) {
-        // todo!()
+    fn draw_arc(&mut self, _item: altium::draw::DrawArc) {
+        // TODO: figure out <https://github.com/nical/lyon/issues/909>
+        // let mut builder = Path::builder().with_svg();
+        // // builder.move_to(loc_to_p2d(item.center));
+        // // builder.arc_to(
+        // //     vector(500000.0, 500000.0),
+        // //     , 0.0, , )
+        // dbg!(&item);
+
+        // builder.arc(
+        //     // lyon::math::point(1000.0, 1000.0),
+        //     loc_to_p2d(item.center),
+        //     // vector(item.x_radius as f32, item.y_radius as f32) * 100.0,
+        //     vector(500000.0, 500000.0),
+        //     Angle::radians(std::f32::consts::FRAC_PI_4),
+        //     Angle::radians(std::f32::consts::FRAC_PI_4 * 2.0),
+        //     // Angle::radians(std::f32::consts::),
+        //     // Angle::radians(item.end_angle - item.start_angle),
+        //     // Angle::radians(item.end_angle),
+        //     // Angle::radians(item.start_angle),
+        //     // Angle::radians(item.end_angle),
+        //     // Angle::radians(item.start_angle + 3.0 * std::f32::consts::FRAC_PI_4),
+        // );
+
+        // let path = builder.build();
+
+        // self.stroke_tess
+        //     .tessellate_path(
+        //         &path,
+        //         &STROKE_OPTIONS
+        //             .with_line_width(10000.0)
+        //             // .with_line_width(item.width as f32 / 4.0)
+        //             // .with_line_width(item.width as f32)
+        //             .with_start_cap(lyon::path::LineCap::Square)
+        //             .with_end_cap(lyon::path::LineCap::Round)
+        //             // .with_start_cap(item.start_cap.to_lyon_ty())
+        //             // .with_end_cap(item.end_cap.to_lyon_ty())
+        //             .with_line_join(item.line_join.to_lyon_ty()),
+        //         &mut BuffersBuilder::new(
+        //             &mut self.stroke_geometry,
+        //             WithColor(item.color.as_float_rgba()),
+        //         ),
+        //     )
+        //     .unwrap();
+    }
+
+    fn draw_polygon(&mut self, item: altium::draw::DrawPolygon) {
+        let Some((first_loc, locations)) = item.locations.split_first() else {
+            return;
+        };
+
+        let mut builder = Path::builder();
+        builder.begin(point(first_loc.x_f32(), first_loc.y_f32()));
+        for loc in locations {
+            builder.line_to(point(loc.x_f32(), loc.y_f32()));
+        }
+
+        builder.close();
+        let path = builder.build();
+
+        self.fill_tess
+            .tessellate_path(
+                &path,
+                &FILL_OPTIONS,
+                &mut BuffersBuilder::new(
+                    &mut self.fill_geometry,
+                    WithColor(item.fill_color.as_float_rgba()),
+                ),
+            )
+            .unwrap();
+
+        self.stroke_tess
+            .tessellate_path(
+                &path,
+                &STROKE_OPTIONS
+                    .with_line_width(item.stroke_width as f32)
+                    .with_start_cap(item.start_cap.to_lyon_ty())
+                    .with_end_cap(item.end_cap.to_lyon_ty())
+                    .with_line_join(item.line_join.to_lyon_ty()),
+                &mut BuffersBuilder::new(
+                    &mut self.stroke_geometry,
+                    WithColor(item.stroke_color.as_float_rgba()),
+                ),
+            )
+            .unwrap();
     }
 
     fn draw_rectangle(&mut self, item: altium::draw::DrawRectangle) {
@@ -475,7 +579,11 @@ impl Canvas for TessCtx {
         self.stroke_tess
             .tessellate_rectangle(
                 &rect,
-                &STROKE_OPTIONS.with_line_width(item.stroke_width as f32),
+                &STROKE_OPTIONS
+                    .with_line_width(item.stroke_width as f32)
+                    .with_start_cap(item.start_cap.to_lyon_ty())
+                    .with_end_cap(item.end_cap.to_lyon_ty())
+                    .with_line_join(item.line_join.to_lyon_ty()),
                 &mut BuffersBuilder::new(
                     &mut self.stroke_geometry,
                     WithColor(item.stroke_color.as_float_rgba()),
@@ -558,6 +666,18 @@ mod alt_to_lyon {
                 LineCap::Butt => lyon::path::LineCap::Butt,
                 LineCap::Square => lyon::path::LineCap::Square,
                 LineCap::Round => lyon::path::LineCap::Round,
+            }
+        }
+    }
+
+    impl ToLyonTy<lyon::path::LineJoin> for altium::draw::LineJoin {
+        fn to_lyon_ty(&self) -> lyon::path::LineJoin {
+            use altium::draw::LineJoin;
+            match self {
+                LineJoin::Miter => lyon::path::LineJoin::Miter,
+                LineJoin::MiterClip => lyon::path::LineJoin::MiterClip,
+                LineJoin::Round => lyon::path::LineJoin::Round,
+                LineJoin::Bevel => lyon::path::LineJoin::Bevel,
             }
         }
     }

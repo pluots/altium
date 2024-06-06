@@ -11,7 +11,9 @@ use std::{
 };
 
 use altium::{
-    sch::{Component, SchRecord},
+    font::FontCollection,
+    sch::{Component, SchRecord, Storage},
+    Location,
     SchDoc,
     SchLib,
 };
@@ -185,6 +187,10 @@ pub fn v_to_p2d(v: Vec2) -> Point2D<f32, UnknownUnit> {
     Point2D::new(v.x, v.y)
 }
 
+pub fn loc_to_p2d(loc: Location) -> Point2D<f32, UnknownUnit> {
+    Point2D::new(loc.x_f32(), loc.y_f32())
+}
+
 impl Default for ViewState {
     fn default() -> Self {
         Self {
@@ -208,18 +214,26 @@ pub enum TabDataInner {
 #[derive(Debug, Default)]
 pub struct SchLibTab {
     pub components: Vec<Arc<Component>>,
-    /// Index in `components` to display in a scrollable list
-    pub active_component: usize,
+    /// Index in `components` to display in a scrollable list.
+    pub active_component_idx: Option<usize>,
     pub search_query: String,
     /// A filter indicates to hide these items. We store hidden rather than
     /// visible so if there are no filters, we don't allocate
     pub hide_items: Vec<usize>,
 }
 
-#[derive(Debug, Default)]
+impl SchLibTab {
+    pub fn active_component(&self) -> Option<&Arc<Component>> {
+        self.active_component_idx.map(|idx| &self.components[idx])
+    }
+}
+
+#[derive(Debug)]
 pub struct SchDocTab {
-    #[allow(dead_code)]
-    pub records: Vec<SchRecord>,
+    pub records: Arc<[SchRecord]>,
+    pub storage: Arc<Storage>,
+    pub fonts: Arc<FontCollection>,
+    pub name: Arc<str>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -310,6 +324,11 @@ fn schdoc_to_tab(path: PathBuf) -> Option<TabData> {
 
     let inner = SchDocTab {
         records: doc.records().cloned().collect(),
+        storage: Arc::clone(doc.storage()),
+        fonts: Arc::new(FontCollection::from(
+            doc.fonts().cloned().collect::<Vec<_>>(),
+        )),
+        name: path.to_string_lossy().into(),
     };
 
     let new_tab = TabData {
