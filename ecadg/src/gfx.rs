@@ -88,7 +88,7 @@ impl egui_wgpu::CallbackTrait for SchLibCallback {
     fn paint<'a>(
         &'a self,
         _info: PaintCallbackInfo,
-        render_pass: &mut RenderPass<'a>,
+        render_pass: &mut RenderPass<'static>,
         resources: &'a CallbackResources,
     ) {
         let ctx: &GraphicsCtx = resources.get().unwrap();
@@ -150,7 +150,7 @@ impl egui_wgpu::CallbackTrait for SchDocCallback {
     fn paint<'a>(
         &'a self,
         _info: PaintCallbackInfo,
-        render_pass: &mut RenderPass<'a>,
+        render_pass: &mut RenderPass<'static>,
         resources: &'a CallbackResources,
     ) {
         let ctx: &GraphicsCtx = resources.get().unwrap();

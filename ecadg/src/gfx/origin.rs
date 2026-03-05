@@ -39,7 +39,6 @@ impl Default for OriginUniformBuf {
 pub struct OriginCtx {
     uniform_buffer: wgpu::Buffer,
     uniform_buffer_data: OriginUniformBuf,
-    instance_buffer: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
 }
@@ -53,12 +52,6 @@ impl OriginCtx {
             // Mapping at creation (as done by the create_buffer_init utility) doesn't require us to to add the MAP_WRITE usage
             // (this *happens* to workaround this bug)
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("origin_instance"),
-            contents: &[],
-            usage: wgpu::BufferUsages::VERTEX,
         });
 
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -100,13 +93,13 @@ impl OriginCtx {
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: "vs_main",
+                entry_point: Some("vs_main"),
                 buffers: &[],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: "fs_main",
+                entry_point: Some("fs_main"),
                 targets: &[Some(render_state.target_format.into())],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
@@ -114,13 +107,13 @@ impl OriginCtx {
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
+            cache: None,
         });
 
         Self {
             uniform_buffer,
             bind_group,
             pipeline,
-            instance_buffer,
             uniform_buffer_data: OriginUniformBuf::default(),
         }
     }
@@ -142,10 +135,9 @@ impl OriginCtx {
     }
 
     /// Draw needed triangles
-    pub fn paint<'a>(&'a self, render_pass: &mut RenderPass<'a>, _vs: ViewState) {
+    pub fn paint<'a>(&'a self, render_pass: &mut RenderPass<'static>, _vs: ViewState) {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
-        render_pass.set_vertex_buffer(0, self.instance_buffer.slice(..));
         render_pass.draw(0..12, 0..1);
     }
 }

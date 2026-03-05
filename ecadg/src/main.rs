@@ -21,10 +21,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     parse_args()?;
 
     let native_options = eframe::NativeOptions::default();
+    log::info!("ABC");
     eframe::run_native(
         "ecadg",
         native_options,
-        Box::new(|cc| Box::new(ecadg::GuiApp::new(cc))),
+        Box::new(|cc| Ok(Box::new(ecadg::GuiApp::new(cc)))),
     )
     .map_err(Into::into)
 }

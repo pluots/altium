@@ -47,7 +47,7 @@ impl Default for GridUniformBuf {
 /// Data that can be selected for each run of the pipeline
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
 #[repr(C, align(16))]
-pub struct GridInstanceBuf {
+struct GridInstanceBuf {
     /// Multiplier of spacing to make major and minor grids
     spacing_mult: f32,
     /// Unused
@@ -197,14 +197,14 @@ impl GridCtx {
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: "vs_main",
+                entry_point: Some("vs_main"),
                 // buffers: &[],
                 buffers: &[GridInstanceBuf::desc()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: "fs_main",
+                entry_point: Some("fs_main"),
                 targets: &[Some(render_state.target_format.into())],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
@@ -215,6 +215,7 @@ impl GridCtx {
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
+            cache: None,
         });
 
         Self {
@@ -264,7 +265,7 @@ impl GridCtx {
     }
 
     /// Draw needed lines
-    pub fn paint<'a>(&'a self, render_pass: &mut RenderPass<'a>, vs: ViewState) {
+    pub fn paint<'a>(&'a self, render_pass: &mut RenderPass<'static>, vs: ViewState) {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.instance_buffer.slice(..));

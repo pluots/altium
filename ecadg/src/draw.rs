@@ -1,4 +1,7 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    cell::Cell,
+    ops::{Deref, DerefMut},
+};
 
 use altium::draw::{
     Canvas,
@@ -15,10 +18,22 @@ use eframe::egui;
 use egui::{Align2, Color32, RichText, Stroke};
 use egui_plot::{Line, PlotPoint, PlotPoints, PlotUi, Polygon, Text};
 
-pub struct PlotUiWrapper<'a>(pub &'a mut PlotUi);
+/// Names must be unique, so just use a counter.
+macro_rules! inc_id {
+    ($name:literal) => {{
+        thread_local! {
+            static INDEX: Cell<u64> = Cell::new(0);
+        }
+        let idx = INDEX.get();
+        INDEX.set(idx + 1);
+        format!("{}{idx:06}", $name)
+    }};
+}
 
-impl Deref for PlotUiWrapper<'_> {
-    type Target = PlotUi;
+pub struct PlotUiWrapper<'a>(pub &'a mut PlotUi<'a>);
+
+impl<'a> Deref for PlotUiWrapper<'a> {
+    type Target = PlotUi<'a>;
 
     fn deref(&self) -> &Self::Target {
         self.0
@@ -36,9 +51,11 @@ impl altium::sealed::Sealed for PlotUiWrapper<'_> {}
 impl Canvas for PlotUiWrapper<'_> {
     fn draw_text(&mut self, item: DrawText) {
         let txt = RichText::new(item.text).size(f32::from(item.font.size()) * 2.0);
+
         // let txt = RichText::new(item.text).size(f32::from(item.font.size()) * 13.8);
+
         self.text(
-            Text::new(PlotPoint::new(item.x, item.y), txt)
+            Text::new(inc_id!("canvas.text"), PlotPoint::new(item.x, item.y), txt)
                 .anchor(to_align2(item.anchor_v, item.anchor_h))
                 .color(to_c32(item.color)),
         );
@@ -46,26 +63,32 @@ impl Canvas for PlotUiWrapper<'_> {
 
     fn draw_line(&mut self, item: DrawLine) {
         self.line(
-            Line::new(vec![
-                [f64::from(item.start.x()), f64::from(item.start.y())],
-                [f64::from(item.end.x()), f64::from(item.end.y())],
-            ])
+            Line::new(
+                inc_id!("canvas.line"),
+                vec![
+                    [f64::from(item.start.x()), f64::from(item.start.y())],
+                    [f64::from(item.end.x()), f64::from(item.end.y())],
+                ],
+            )
             .color(to_c32(item.color))
             .width(item.width as f32),
         );
     }
 
     fn draw_rectangle(&mut self, item: DrawRectangle) {
-        let poly = Polygon::new(vec![
-            [f64::from(item.x), f64::from(item.y)],
-            [f64::from(item.x + item.width), f64::from(item.y)],
-            [
-                f64::from(item.x + item.width),
-                f64::from(item.y + item.height),
+        let poly = Polygon::new(
+            inc_id!("canvas.rect"),
+            vec![
+                [f64::from(item.x), f64::from(item.y)],
+                [f64::from(item.x + item.width), f64::from(item.y)],
+                [
+                    f64::from(item.x + item.width),
+                    f64::from(item.y + item.height),
+                ],
+                [f64::from(item.x), f64::from(item.y + item.height)],
+                [f64::from(item.x), f64::from(item.y)],
             ],
-            [f64::from(item.x), f64::from(item.y + item.height)],
-            [f64::from(item.x), f64::from(item.y)],
-        ])
+        )
         .stroke(Stroke {
             // width: f32::from(item.stroke_width) * 20.0,
             width: 10.0,
@@ -80,6 +103,7 @@ impl Canvas for PlotUiWrapper<'_> {
 
     fn draw_polygon(&mut self, item: DrawPolygon) {
         let poly = Polygon::new(
+            inc_id!("canvas.poly"),
             item.locations
                 .iter()
                 .map(|loc| [f64::from(loc.x()), f64::from(loc.y())])
