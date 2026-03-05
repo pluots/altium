@@ -51,7 +51,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           lfs: true
-      - run: rustup default 1.85
+      - run: rustup update stable --no-self-update && rustup default stable
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
@@ -61,6 +61,18 @@ jobs:
         if: matrix.build == 'linux'
       - run: cargo nextest run
       - run: cargo test --doc
+
+  msrv:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          msrv="$(
+            cargo metadata --no-deps --format-version 1 |
+              jq -r '.packages | map(select(.name == "altium")) | first | .rust_version'
+          )"
+          rustup update "$msrv" --no-self-update && rustup default "$msrv"
+      - run: cargo check -p altium
 
   fmt:
     name: "Format (cargo fmt)"
