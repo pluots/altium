@@ -135,10 +135,8 @@ fn parse_header(buf: &[u8]) -> Result<(&[u8], UniqueId), Error> {
     let (hdr, rest) = extract_sized_buf(buf, BufLenMatch::U32, true)?;
     for (key, val) in split_altium_map(hdr) {
         match key {
-            b"HEADER" => {
-                if val != HEADER.as_bytes() {
-                    return Err(ErrorKind::new_invalid_header(val, HEADER).into());
-                }
+            b"HEADER" if val != HEADER.as_bytes() => {
+                return Err(ErrorKind::new_invalid_header(val, HEADER).into());
             }
             b"UniqueID" => uid = Some(val.parse_as_utf8()?),
             _ => (),

@@ -98,7 +98,7 @@ impl<F: Read + Seek> SchLib<F> {
             let mut cfile_ref = self.cfile.borrow_mut();
             let mut stream = cfile_ref.open_stream(&data_path).map_err(|e| {
                 let path_disp = data_path.display();
-                Error::from(e).context(format!("reading required stream `{path_disp}`",))
+                Error::from(e).context(format!("reading required stream `{path_disp}`"))
             })?;
             stream.read_to_end(&mut buf).unwrap();
         }
@@ -166,7 +166,7 @@ pub struct ComponentsIter<'a, F> {
     current: usize,
 }
 
-impl<'a, F: Read + Seek> Iterator for ComponentsIter<'a, F> {
+impl<F: Read + Seek> Iterator for ComponentsIter<'_, F> {
     type Item = Component;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -294,7 +294,7 @@ impl SchLibMeta {
             }
 
             match key {
-                b"HEADER" => continue,
+                b"HEADER" => (),
                 b"Weight" => ret.weight = val.parse_as_utf8()?,
                 b"MinorVersion" => ret.minor_version = val.parse_as_utf8()?,
                 b"UniqueID" => ret.unique_id = val.parse_as_utf8()?,

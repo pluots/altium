@@ -135,7 +135,7 @@ impl OriginCtx {
     }
 
     /// Draw needed triangles
-    pub fn paint<'a>(&'a self, render_pass: &mut RenderPass<'static>, _vs: ViewState) {
+    pub fn paint(&self, render_pass: &mut RenderPass<'static>, _vs: ViewState) {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.draw(0..12, 0..1);

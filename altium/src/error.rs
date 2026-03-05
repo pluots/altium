@@ -335,7 +335,7 @@ impl<T: Clone + Copy> TruncBuf<T> {
 }
 
 impl TruncBuf<u8> {
-    pub(crate) fn as_str(&self) -> Cow<str> {
+    pub(crate) fn as_str(&self) -> Cow<'_, str> {
         String::from_utf8_lossy(&self.buf)
     }
 }

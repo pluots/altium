@@ -348,7 +348,7 @@ pub enum PosVert {
 pub fn is_number_pattern(s: &[u8], prefix: &[u8]) -> bool {
     if let Some(stripped) = s
         .strip_prefix(prefix)
-        .map(|s| s.strip_prefix(&[b'-']).unwrap_or(s))
+        .map(|s| s.strip_prefix(b"-").unwrap_or(s))
     {
         if stripped.iter().all(u8::is_ascii_digit) {
             return true;

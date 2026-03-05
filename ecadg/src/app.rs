@@ -59,7 +59,7 @@ impl GuiApp {
     fn show(&mut self, ui: &mut egui::Ui) {
         egui::TopBottomPanel::top("top_panel").show_inside(ui, |ui| {
             // The top panel is often a good place for a menu bar:
-            egui::menu::bar(ui, |ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Open").clicked() {
                         if let Some(path) = rfd::FileDialog::new().pick_file() {
@@ -86,7 +86,7 @@ impl GuiApp {
 
         egui::TopBottomPanel::bottom("bottom_panel").show_inside(ui, |ui| {
             // The top panel is often a good place for a menu bar:
-            egui::menu::bar(ui, |ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.heading("bottom panel");
                 });

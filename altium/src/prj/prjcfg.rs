@@ -5,9 +5,9 @@ use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::Path;
+use std::sync::LazyLock;
 
 use ini::{Ini, Properties};
-use lazy_static::lazy_static;
 use regex::Regex;
 use uuid::Uuid;
 
@@ -16,10 +16,8 @@ use crate::common::UniqueId;
 use crate::error::ErrorKind;
 use crate::Error;
 
-lazy_static! {
-    /// `Document1`, `Document2`, etc
-    static ref DOC_RE: Regex = Regex::new(r"Document\d+").unwrap();
-}
+/// `Document1`, `Document2`, etc
+static DOC_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"Document\d+").unwrap());
 
 /// Representation of a PCB Project file (`.PrjPcb`)
 #[non_exhaustive]

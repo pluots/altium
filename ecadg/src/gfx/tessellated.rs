@@ -390,7 +390,7 @@ impl TessCtx {
     }
 
     /// Draw needed triangles
-    pub fn paint<'a>(&'a self, render_pass: &mut RenderPass<'static>, _vs: ViewState) {
+    pub fn paint(&self, render_pass: &mut RenderPass<'static>, _vs: ViewState) {
         if !self.needs_render() {
             debug!("skipping tessellation paint");
             return;

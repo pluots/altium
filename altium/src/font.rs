@@ -1,15 +1,16 @@
 //! Objects related to font as Altium sees it.
 
-use std::ops::{Deref, DerefMut};
+use std::{
+    ops::{Deref, DerefMut},
+    sync::LazyLock,
+};
 
 use serde::{Deserialize, Serialize};
 
-lazy_static::lazy_static! {
-    pub(crate) static ref DEFAULT_FONT: Font = Font {
-        name: "Calibri".into(),
-        size: 8,
-    };
-}
+pub(crate) static DEFAULT_FONT: LazyLock<Font> = LazyLock::new(|| Font {
+    name: "Calibri".into(),
+    size: 8,
+});
 
 /// A font that is stored in a library
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]

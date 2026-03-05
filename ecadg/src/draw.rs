@@ -30,6 +30,7 @@ macro_rules! inc_id {
     }};
 }
 
+#[expect(unused)] // being replaced by direct gpu rendering
 pub struct PlotUiWrapper<'a>(pub &'a mut PlotUi<'a>);
 
 impl<'a> Deref for PlotUiWrapper<'a> {
@@ -127,6 +128,7 @@ impl Canvas for PlotUiWrapper<'_> {
     }
 }
 
+#[expect(unused)]
 fn to_align2(v: PosVert, h: PosHoriz) -> Align2 {
     match (v, h) {
         (PosVert::Top, PosHoriz::Left) => Align2::LEFT_TOP,
@@ -141,6 +143,7 @@ fn to_align2(v: PosVert, h: PosHoriz) -> Align2 {
     }
 }
 
+#[expect(unused)]
 fn to_c32(color: Rgb) -> Color32 {
     let Rgb {
         mut r,

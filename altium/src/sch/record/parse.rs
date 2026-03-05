@@ -39,7 +39,7 @@ pub fn parse_all_records(buf: &[u8], err_name: &str) -> Result<Vec<SchRecord>, E
 
         let record = match ty {
             UTF8_RECORD_TY => parse_any_record(to_parse),
-            PIN_RECORD_TY => SchPin::parse(to_parse).map_err(Into::into),
+            PIN_RECORD_TY => SchPin::parse(to_parse),
             _ => panic!("unexpected record type {ty:02x}"),
         };
 

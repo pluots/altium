@@ -14,13 +14,13 @@ various file types is listed below:
 
 |                          | Extension   | List Items | Display | Write | Documentation                         |
 | ------------------------ | ----------- | ---------- | ------- | ----- | ------------------------------------- |
-| Binary Schematic Library | .SchLib     | ✓          | Poorly  |       | Good                                  |
-| Binary PCB Library       | .PcbLib     |            |         |       |                                       |
-| Binary Schematic Doc     | .SchDoc     | ✓          |         |       |                                       |
-| Binary PCB Doc           | .PcbDoc     |            |         |       |                                       |
-| Draftsman Doc            | .PcbDwf     |            |         |       |                                       |
-| PCB Project              | .PrjPcb     |            |         |       |                                       |
-| Material Library         | .xml        |            | N/A     |       |                                       |
+| Binary Schematic Library | `.SchLib`   | ✓          | Poorly  |       | Good                                  |
+| Binary PCB Library       | `.PcbLib`   |            |         |       |                                       |
+| Binary Schematic Doc     | `.SchDoc`   | ✓          |         |       |                                       |
+| Binary PCB Doc           | `.PcbDoc`   |            |         |       |                                       |
+| Draftsman Doc            | `.PcbDwf`   |            |         |       |                                       |
+| PCB Project              | `.PrjPcb`   |            |         |       |                                       |
+| Material Library         | `.xml`      |            | N/A     |       |                                       |
 | Any templates            | Not Planned |            |         |       |                                       |
 
 ## Examples
