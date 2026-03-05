@@ -9,27 +9,26 @@ description = "A library for processing Altium file types"
 rust-version = "1.85"
 
 [dependencies]
-altium-macros = { path = "../altium-macros", version = "0.2.1" }
-base64 = "0.22.1"
-cfb = "0.10.0"
-flate2 = "1.0.30"
-# image = "0.24.6"
-image = { version = "0.25.1", default-features = false, features = ["png", "bmp", "jpeg"] }
-log = "0.4.21"
-num-traits = "0.2.19"
-num_enum = "0.7.2"
-quick-xml = "0.31.0"
-regex = "1.10.4"
-rust-ini = "0.21.0"
-serde = { version = "1.0.203", features = ["derive"] }
-serde-xml-rs = "0.6.0"
-svg = "0.17.0"
-uom = "0.36.0"
-uuid = { version = "1.8.0", features = ["v1", "v4", "fast-rng", "serde"]}
-xml-rs = "0.8.20"
+altium-macros.workspace = true
+base64.workspace = true
+cfb.workspace = true
+flate2.workspace = true
+image = { workspace = true, features = ["png", "bmp", "jpeg"] }
+log.workspace = true
+num-traits.workspace = true
+num_enum.workspace = true
+quick-xml.workspace = true
+regex.workspace = true
+rust-ini.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde-xml-rs.workspace = true
+svg.workspace = true
+uom.workspace = true
+uuid = { workspace = true, features = ["v1", "v4", "fast-rng", "serde"]}
+xml-rs.workspace = true
 
 [dev-dependencies]
-env_logger = "0.11.3"
+env_logger.workspace = true
 
 [features]
 _sealed = []

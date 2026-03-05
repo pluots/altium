@@ -4,18 +4,18 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-altium = { path = "../altium", version = "0.2.1", features = ["_sealed"] }
-egui = "0.33.3"
-egui_extras = "0.33.3"
-egui_plot = "0.34.1"
-eframe = { version = "0.33.3", features = ["wgpu", "persistence"] }
-log = "0.4.21"
-serde = "1.0.203"
-rfd = "0.14.1"
-regex = "1.10.4"
-bytemuck = "1.16.0"
-lyon = "1.0.1"
-glyphon = "0.10.0"
+altium = { workspace = true, features = ["_sealed"] }
+bytemuck.workspace = true
+eframe = { workspace = true, features = ["wgpu", "persistence"] }
+egui.workspace = true
+egui_extras.workspace = true
+egui_plot.workspace = true
+glyphon.workspace = true
+log.workspace = true
+lyon.workspace = true
+regex.workspace = true
+rfd.workspace = true
+serde.workspace = true
 
 [features]
 default = ["_debug"]
@@ -23,11 +23,11 @@ _debug = []
 
 # native
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.11"
+env_logger.workspace = true
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen-futures = "0.4"
+wasm-bindgen-futures.workspace = true
 
 # # Optimize all dependencies even in debug builds:
 # [profile.dev.package."*"]
