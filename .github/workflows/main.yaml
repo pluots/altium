@@ -31,8 +31,9 @@ jobs:
       matrix:
         include:
         - os: ubuntu-24.04
-        - os: macos-15
-        - os: windows-2025
+        # Disabled to keep CI lighter weight
+        # - os: macos-15
+        # - os: windows-2025
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
