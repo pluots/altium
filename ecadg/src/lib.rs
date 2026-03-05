@@ -24,7 +24,7 @@ macro_rules! println_once {
 
 mod app;
 mod backend;
-mod draw;
+// mod draw;
 mod gfx;
 pub use app::GuiApp;
 pub use backend::open_file_sync_err;

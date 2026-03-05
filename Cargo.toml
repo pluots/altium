@@ -15,9 +15,12 @@ bytemuck = "1.25.0"
 cfb = "0.14.0"
 clap = { version = "4.5.60", features = ["derive"] }
 convert_case = "0.11.0"
-eframe = "0.33.3"
-egui = "0.33.3"
-egui_extras = "0.33.3"
+# eframe = "0.33.3"
+# egui = "0.33.3"
+# egui_extras = "0.33.3"
+eframe = { git = "https://github.com/SuchAFuriousDeath/egui.git", rev = "2c86c19540e48a2cfd036123e4803fc2dedfb801" }
+egui = { git = "https://github.com/SuchAFuriousDeath/egui.git", rev = "2c86c19540e48a2cfd036123e4803fc2dedfb801" }
+egui_extras = { git = "https://github.com/SuchAFuriousDeath/egui.git", rev = "2c86c19540e48a2cfd036123e4803fc2dedfb801" }
 egui_plot = "0.34.1"
 env_logger = "0.11.9"
 flate2 = "1.1.9"

@@ -1,3 +1,5 @@
+/* disabled while egui_plot is unreleased */
+
 use std::{
     cell::Cell,
     ops::{Deref, DerefMut},

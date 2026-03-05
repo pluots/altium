@@ -57,7 +57,7 @@ impl GuiApp {
     }
 
     fn show(&mut self, ui: &mut egui::Ui) {
-        egui::TopBottomPanel::top("top_panel").show_inside(ui, |ui| {
+        egui::Panel::top("top_panel").show_inside(ui, |ui| {
             // The top panel is often a good place for a menu bar:
             egui::MenuBar::new().ui(ui, |ui| {
                 ui.menu_button("File", |ui| {
@@ -84,7 +84,7 @@ impl GuiApp {
             });
         });
 
-        egui::TopBottomPanel::bottom("bottom_panel").show_inside(ui, |ui| {
+        egui::Panel::bottom("bottom_panel").show_inside(ui, |ui| {
             // The top panel is often a good place for a menu bar:
             egui::MenuBar::new().ui(ui, |ui| {
                 ui.vertical_centered(|ui| {
@@ -93,23 +93,23 @@ impl GuiApp {
             });
         });
 
-        let full_width = ui.ctx().available_rect().width();
-        egui::SidePanel::left("left_panel")
+        let full_width = ui.ctx().content_rect().width();
+        egui::Panel::left("left_panel")
             .resizable(true)
-            .default_width((full_width * 0.20).min(300.0))
-            .min_width((full_width * 0.10).min(300.0))
-            .max_width(full_width * 0.75)
+            .default_size((full_width * 0.20).min(300.0))
+            .min_size((full_width * 0.10).min(300.0))
+            .max_size(full_width * 0.75)
             .show_inside(ui, |ui| {
                 make_left_panel(self, ui);
                 // Add a dummmy component that takes up space so we can resize the element
                 ui.allocate_space(ui.available_size());
             });
 
-        egui::SidePanel::right("right_panel")
+        egui::Panel::right("right_panel")
             .resizable(true)
-            .default_width((full_width * 0.20).min(300.0))
-            .min_width((full_width * 0.10).min(300.0))
-            .max_width(full_width * 0.75)
+            .default_size((full_width * 0.20).min(300.0))
+            .min_size((full_width * 0.10).min(300.0))
+            .max_size(full_width * 0.75)
             .show_inside(ui, |ui| {
                 // .show(ctx, |ui| {
                 make_right_panel(self, ui);
@@ -127,10 +127,8 @@ impl eframe::App for GuiApp {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
-    /// Called each time the UI needs repainting, which may be many times per second.
-    /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-    #[allow(clippy::too_many_lines)]
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    /// App logic that is also called if the window is in the background.
+    fn logic(&mut self, _ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if HAS_FRESH_DATA.load(SeqCst) {
             // If there is fresh data, grab it
             GlobalQueue::drain(&mut self.tabs, &mut self.recent_files, &mut self.errors);
@@ -143,12 +141,15 @@ impl eframe::App for GuiApp {
         } else if self.tabs.is_empty() {
             self.active_tab = None;
         }
+    }
 
+    /// Called each time the UI needs repainting, which may be many times per second.
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         // Unsure why but things seem to work better if we have a main `CentraPanel` wrapper.
-        egui::CentralPanel::default().show(ctx, |ui| self.show(ui));
+        egui::CentralPanel::default().show_inside(ui, |ui| self.show(ui));
 
         if false {
-            egui::Window::new("Window").show(ctx, |ui| {
+            egui::Window::new("Window").show(ui, |ui| {
                 ui.label("Windows can be moved by dragging them.");
                 ui.label("They are automatically sized based on contents.");
                 ui.label("You can turn on resizing and scrolling if you like.");
@@ -226,43 +227,44 @@ fn make_center_panel(app: &mut GuiApp, ui: &mut Ui) {
     });
 
     // main content
-    let (rect, response) = ui.allocate_at_least(ui.available_size(), egui::Sense::click_and_drag());
     let Some(tab_idx) = app.active_tab else {
         return;
     };
 
     let tabdata = &mut app.tabs[tab_idx];
-
-    let hovered = response.hovered();
     let view_state = &mut tabdata.view_state;
+
+    egui::Panel::bottom("status_bar").show_inside(ui, |ui| {
+        ui.label(format!(
+            "view_state: {view_state:#?}; vp: {}; vs offset_gfx: {}; pos world: {}",
+            rect_disp(view_state.world_viewport()),
+            vec_disp(view_state.offset_gfx()),
+            vec_disp(view_state.px_to_world(view_state.latest_pos.unwrap_or_default().to_vec2()))
+        ));
+    });
+
+    let (rect, response) = ui.allocate_at_least(ui.available_size(), egui::Sense::click_and_drag());
+    let hovered = response.hovered();
     view_state.rect = rect;
+
     if hovered {
         view_state.update_dragged_by(response.drag_delta());
         ui.input(|istate| view_state.update_with_input_state(istate));
     }
 
-    #[cfg(feature = "_debug")]
-    ui.label(format!(
-        "view_state: {view_state:?}; vp: {}; hovered: {hovered}; vs offset_gfx: {}; pos world: {}",
-        rect_disp(view_state.world_viewport()),
-        vec_disp(view_state.offset_gfx()),
-        vec_disp(view_state.px_to_world(view_state.latest_pos.unwrap_or_default().to_vec2()))
-    ));
-
     match &mut tabdata.inner {
-        TabDataInner::SchLib(tab) => make_center_panel_schlib(ui, rect, tab, view_state),
-        TabDataInner::SchDoc(tab) => make_center_panel_schdoc(ui, rect, tab, view_state),
+        TabDataInner::SchLib(tab) => make_center_panel_schlib(ui, tab, view_state),
+        TabDataInner::SchDoc(tab) => make_center_panel_schdoc(ui, tab, view_state),
     }
 }
 
 #[allow(clippy::needless_pass_by_ref_mut)]
-fn make_center_panel_schlib(ui: &mut Ui, rect: egui::Rect, tab: &SchLibTab, vs: &ViewState) {
+fn make_center_panel_schlib(ui: &mut Ui, tab: &SchLibTab, vs: &ViewState) {
     let Some(comp) = tab.active_component() else {
         ui.label("no component selected");
         return;
     };
 
-    ui.label(format!("rect: {rect:?}, vs: {vs:?}"));
     egui::Frame::canvas(ui.style()).show(ui, |ui| {
         ui.painter()
             .add(crate::gfx::SchLibCallback::callback(Arc::clone(comp), vs))
@@ -270,7 +272,7 @@ fn make_center_panel_schlib(ui: &mut Ui, rect: egui::Rect, tab: &SchLibTab, vs: 
 }
 
 #[allow(clippy::needless_pass_by_ref_mut)]
-fn make_center_panel_schdoc(ui: &mut Ui, _rect: egui::Rect, tab: &SchDocTab, vs: &mut ViewState) {
+fn make_center_panel_schdoc(ui: &mut Ui, tab: &SchDocTab, vs: &mut ViewState) {
     egui::Frame::canvas(ui.style()).show(ui, |ui| {
         ui.painter()
             .add(crate::gfx::SchDocCallback::callback(tab, vs))
