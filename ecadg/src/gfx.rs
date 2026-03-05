@@ -4,6 +4,7 @@ mod grid;
 mod origin;
 mod poly;
 mod tessellated;
+mod text;
 mod triangle;
 
 // use std::sync::Arc;
@@ -27,6 +28,7 @@ pub fn init_graphics(cc: &eframe::CreationContext<'_>) {
         .expect("failed to prepare render state");
 
     let device = &wgpu_render_state.device;
+    wgpu_render_state.target_format;
 
     wgpu_render_state
         .renderer
@@ -37,6 +39,7 @@ pub fn init_graphics(cc: &eframe::CreationContext<'_>) {
             grid: grid::GridCtx::init(wgpu_render_state, device),
             origin: origin::OriginCtx::init(wgpu_render_state, device),
             tess: tessellated::TessCtx::init(wgpu_render_state, device),
+            text: text::TextCtx::init(wgpu_render_state, device),
         });
 }
 
@@ -47,6 +50,7 @@ struct GraphicsCtx {
     grid: grid::GridCtx,
     origin: origin::OriginCtx,
     tess: tessellated::TessCtx,
+    text: text::TextCtx,
 }
 
 /// Callback for drawing schlib items
@@ -69,9 +73,9 @@ impl SchLibCallback {
 impl egui_wgpu::CallbackTrait for SchLibCallback {
     fn prepare(
         &self,
-        _device: &Device,
+        device: &Device,
         queue: &Queue,
-        _desc: &egui_wgpu::ScreenDescriptor,
+        desc: &egui_wgpu::ScreenDescriptor,
         _encoder: &mut CommandEncoder,
         resources: &mut CallbackResources,
     ) -> Vec<CommandBuffer> {
@@ -81,6 +85,7 @@ impl egui_wgpu::CallbackTrait for SchLibCallback {
         ctx.tess
             .prepare(queue, self.view_state, self.comp.as_ref(), &());
         ctx.origin.prepare(queue, self.view_state);
+        ctx.text.prepare(device, queue, desc);
 
         Vec::new()
     }
@@ -96,6 +101,7 @@ impl egui_wgpu::CallbackTrait for SchLibCallback {
         ctx.grid.paint(render_pass, self.view_state);
         ctx.tess.paint(render_pass, self.view_state);
         ctx.origin.paint(render_pass, self.view_state);
+        ctx.text.paint(render_pass, self.view_state);
     }
 }
 
