@@ -51,10 +51,13 @@ const DEFAULT_BUFFER_LEN: u64 = 1024 * 1024;
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
 struct Globals {
-    resolution: [f32; 2],
+    // resolution: [f32; 2],
     scroll_offset: [f32; 2],
-    scale: f32,
-    _pad: f32,
+    // scale: f32,
+    /// Scale a global position by this number to get a position in the grpahics
+    /// viewport (-1.0 to 1.0).
+    viewport_scale: [f32; 2],
+    // _pad: f32,
 }
 
 #[repr(C)]
@@ -352,10 +355,8 @@ impl TessCtx {
         }
 
         let uniform = Globals {
-            resolution: [vs.rect.width(), vs.rect.height()],
-            scale: vs.scale,
             scroll_offset: vs.offset.into(),
-            _pad: 0.0,
+            viewport_scale: vs.gfx_scale().into(),
         };
 
         queue.write_buffer(&self.globals_ubo, 0, bytemuck::bytes_of(&uniform));

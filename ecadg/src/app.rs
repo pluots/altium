@@ -15,6 +15,7 @@ use crate::backend::{
     TabDataInner,
     ViewState,
     HAS_FRESH_DATA,
+    MM_PER_M,
 };
 #[cfg(feature = "_debug")]
 use crate::backend::{rect_disp, vec_disp};
@@ -41,7 +42,7 @@ impl GuiApp {
     /// Called once before the first frame.
     #[must_use]
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        log::warn!("NEW");
+        log::info!("creating app");
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
 
@@ -236,10 +237,13 @@ fn make_center_panel(app: &mut GuiApp, ui: &mut Ui) {
 
     egui::Panel::bottom("status_bar").show_inside(ui, |ui| {
         ui.label(format!(
-            "view_state: {view_state:#?}; vp: {}; vs offset_gfx: {}; pos world: {}",
+            "view_state: {view_state:#?}\nvp: {}\nvs offset_gfx: {}\npos world (mm): {}",
             rect_disp(view_state.world_viewport()),
             vec_disp(view_state.offset_gfx()),
-            vec_disp(view_state.px_to_world(view_state.latest_pos.unwrap_or_default().to_vec2()))
+            vec_disp(
+                view_state.px_to_world(view_state.latest_curs_pos.unwrap_or_default().to_vec2())
+                    * MM_PER_M
+            )
         ));
     });
 

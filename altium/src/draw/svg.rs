@@ -112,7 +112,7 @@ impl Canvas for SvgCtx {
         let cmt = svg::node::Comment::new(format!("{item:#?}"));
         self.add_node(cmt);
 
-        let (x, y) = (item.x, item.y);
+        let (x, y) = (item.loc.x, item.loc.y);
         let (width, height) = text_dims(item.text, item.font.size);
         let halfwidth = width / 2;
         let halfheight = height / 2;

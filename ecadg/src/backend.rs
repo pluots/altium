@@ -27,8 +27,10 @@ static GLOBAL_QUEUE: Mutex<GlobalQueue> = Mutex::new(GlobalQueue::new());
 pub static HAS_FRESH_DATA: AtomicBool = AtomicBool::new(false);
 
 #[allow(dead_code)]
-pub const NM_PER_M: f32 = 1e9;
+pub const NM_PER_M: f32 = 1e+9;
 pub const M_PER_NM: f32 = 1e-9;
+pub const MM_PER_M: f32 = 1e+3;
+
 /// Initial scale in m/px
 const DEFAULT_SCALE: f32 = 1e-5;
 
@@ -109,7 +111,7 @@ pub struct ViewState {
     /// Offset of world center from view center, in (m, m)
     pub offset: Vec2,
     /// Postion of the cursor in window coordinates
-    pub latest_pos: Option<Pos2>,
+    pub latest_curs_pos: Option<Pos2>,
     /// Rectangle of our view in window coordinates
     pub rect: Rect,
 }
@@ -127,16 +129,19 @@ impl ViewState {
 
         self.scale = f32::clamp(self.scale / istate.zoom_delta(), SCALE_MIN, SCALE_MAX);
         self.offset += flip_y(istate.smooth_scroll_delta) * self.scale;
-        self.latest_pos = istate.pointer.latest_pos();
+        self.latest_curs_pos = istate.pointer.latest_pos();
+    }
+
+    /// Multiply a world position by this to get it in window coordinates, `[-1.0, 1.0]`.
+    pub fn gfx_scale(&self) -> Vec2 {
+        let inv = self.scale * self.rect.size() * 0.5;
+        Vec2::new(1.0 / inv.x, 1.0 / inv.y)
     }
 
     /// Convert a pixel-sized shape to a GUI-sized shape (in the window if within the scale of
     /// (-1.0..1.0)).
     pub fn px_to_gfx(&self, pos: Vec2) -> Vec2 {
-        Vec2 {
-            x: pos.x / (self.rect.width() / 2.0),
-            y: pos.y / (self.rect.height() / 2.0),
-        }
+        pos / (self.rect.size() * 0.5)
     }
 
     /// Convert a point in world coordinates to graphics coordinates
@@ -145,6 +150,7 @@ impl ViewState {
         self.px_to_gfx((pos + self.offset) / self.scale)
     }
 
+    /// Pixel position to world coordinates in meters.
     #[allow(dead_code)]
     pub fn px_to_world(&self, pos: Vec2) -> Vec2 {
         flip_y(pos - self.rect.center().to_vec2()) * self.scale - self.offset
@@ -153,6 +159,23 @@ impl ViewState {
     /// Offset in graphics coordinates
     pub fn offset_gfx(&self) -> Vec2 {
         self.px_to_gfx(self.offset / self.scale)
+    }
+
+    pub fn resolution(&self) -> Vec2 {
+        Vec2::new(self.rect.width(), self.rect.height())
+    }
+
+    pub fn world_to_px(&self, loc: Location) -> Vec2 {
+        let loc = Vec2::new(loc.x_f32(), loc.y_f32()) * M_PER_NM;
+        // let
+        let world_pos = (loc * M_PER_NM) - self.offset;
+        -world_pos / self.scale
+    }
+
+    pub fn local_to_gfx(&self, loc: Location) -> Vec2 {
+        let world_pos = self.world_to_px(loc);
+        let transformed_pos = (world_pos / self.scale) / (0.5 * self.resolution());
+        transformed_pos
     }
 
     /// What portion of the world we are able to view
@@ -196,7 +219,7 @@ impl Default for ViewState {
         Self {
             scale: DEFAULT_SCALE,
             offset: Vec2::default(),
-            latest_pos: None,
+            latest_curs_pos: None,
             rect: Rect::ZERO,
         }
     }

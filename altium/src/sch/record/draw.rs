@@ -139,8 +139,10 @@ impl Draw for SchPin {
 
             // Display name to the right of the pin
             canvas.draw_text(DrawText {
-                x: name_x,
-                y: name_y,
+                loc: Location {
+                    x: name_x,
+                    y: name_y,
+                },
                 text: &self.name,
                 anchor_h,
                 anchor_v,
@@ -156,8 +158,7 @@ impl Draw for SchPin {
             };
 
             canvas.draw_text(DrawText {
-                x: des_x,
-                y: des_y,
+                loc: Location { x: des_x, y: des_y },
                 text: &self.designator,
                 anchor_h,
                 anchor_v,
@@ -178,8 +179,10 @@ impl Draw for record::Label {
         let font = &ctx.fonts.get_idx(self.font_id.into());
         let (anchor_h, anchor_v) = self.justification.into();
         canvas.draw_text(DrawText {
-            x: self.location.x,
-            y: self.location.y,
+            loc: Location {
+                x: self.location.x,
+                y: self.location.y,
+            },
             text: &self.text,
             font,
             anchor_h,
@@ -439,8 +442,10 @@ impl Draw for record::Port {
 
         let font = &ctx.fonts.get_idx(self.font_id.into());
         canvas.draw_text(DrawText {
-            x: self.location.x,
-            y: self.location.y,
+            loc: Location {
+                x: self.location.x,
+                y: self.location.y,
+            },
             text: &self.name,
             color: self.text_color,
             font,
@@ -482,8 +487,10 @@ impl Draw for record::NetLabel {
         let font = &ctx.fonts.get_idx(self.font_id.into());
 
         canvas.draw_text(DrawText {
-            x: self.location.x,
-            y: self.location.y,
+            loc: Location {
+                x: self.location.x,
+                y: self.location.y,
+            },
             text: &self.text,
             color: self.color,
             font,
@@ -571,8 +578,10 @@ impl Draw for record::Parameter {
     fn draw<C: Canvas>(&self, canvas: &mut C, ctx: &SchDrawCtx<'_>) {
         let font = &ctx.fonts.get_idx(self.font_id.into());
         canvas.draw_text(DrawText {
-            x: self.location.x,
-            y: self.location.y,
+            loc: Location {
+                x: self.location.x,
+                y: self.location.y,
+            },
             text: &self.text,
             font,
             ..Default::default()

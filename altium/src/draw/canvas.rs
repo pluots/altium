@@ -66,8 +66,7 @@ pub enum LineJoin {
 /// Helper struct to write some text
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DrawText<'a> {
-    pub x: i32,
-    pub y: i32,
+    pub loc: Location,
     pub text: &'a str,
     pub font: &'a Font,
     pub anchor_h: PosHoriz,
