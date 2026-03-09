@@ -5,6 +5,9 @@ edition = "2021"
 
 [dependencies]
 altium.workspace = true
+anyhow.workspace = true
+cap-std.workspace = true
+cfb.workspace = true
 clap.workspace = true
 regex.workspace = true
 serde_json.workspace = true

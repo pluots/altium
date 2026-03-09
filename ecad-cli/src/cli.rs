@@ -15,6 +15,9 @@ pub enum Subcommand {
     Schdoc(CmdSchdoc),
     #[command(subcommand, alias = "pl")]
     Pcblib(CmdPcblib),
+    /// Tools for working with the CFB format, which is used by Altium files.
+    #[command(subcommand)]
+    Cfb(CmdCfb),
 }
 
 #[derive(Debug, clap::Subcommand)]
@@ -54,4 +57,19 @@ pub struct LibListArgs {
     /// Only show these fields from the records (matched as regex)
     #[arg(short = 'd', long, value_delimiter = ',')]
     pub field_filter: Option<String>,
+}
+
+#[derive(Debug, clap::Subcommand)]
+pub enum CmdCfb {
+    #[command(alias = "x")]
+    Extract(CfbArgs),
+}
+
+#[derive(Debug, clap::Args)]
+pub struct CfbArgs {
+    /// Name of the file to extract
+    pub file: PathBuf,
+    /// Extract to this directory
+    #[arg(short = 'C')]
+    pub dest: PathBuf,
 }

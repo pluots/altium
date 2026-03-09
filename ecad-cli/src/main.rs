@@ -1,14 +1,23 @@
+use std::{
+    fs::{self, File},
+    io,
+    path::{self, PathBuf},
+};
+
 use altium::{
     sch::{Component, ComponentMeta, SchRecord},
     SchDoc,
     SchLib,
 };
+use anyhow::Context;
+use cap_std::fs::{Dir, OpenOptions};
+use cfb::CompoundFile;
 use clap::Parser;
 use cli::{CmdSchdoc, CmdSchlib};
 use regex::Regex;
 use serde_json::{json, Value};
 
-use crate::cli::Subcommand;
+use crate::cli::{CfbArgs, CmdCfb, Subcommand};
 
 mod cli;
 
@@ -18,7 +27,10 @@ fn main() {
     match args.sub {
         Subcommand::Schlib(schlib_cmd) => handle_schlib_cmd(schlib_cmd),
         Subcommand::Schdoc(schdoc_cmd) => handle_schdoc_cmd(schdoc_cmd),
-        Subcommand::Pcblib(_pcblib_cmd) => {}
+        Subcommand::Pcblib(_pcblib_cmd) => {
+            unimplemented!("not yet implemented")
+        }
+        Subcommand::Cfb(cfb_cmd) => handle_cfb_cmd(cfb_cmd),
     };
 }
 
@@ -140,4 +152,58 @@ where
 
     let s = serde_json::to_string_pretty(&val).unwrap();
     println!("{s}");
+}
+
+fn handle_cfb_cmd(cmd: CmdCfb) {
+    match cmd {
+        CmdCfb::Extract(args) => {
+            let CfbArgs { file, dest: dpath } = args;
+
+            let mut f = File::open(&file)
+                .context("failed to open file")
+                .and_then(|f| CompoundFile::open(f).context("could not read file as CFB"))
+                .with_context(|| format!("opening `{}`", file.display()))
+                .unwrap();
+
+            fs::create_dir_all(&dpath)
+                .unwrap_or_else(|e| panic!("failed to create or open `{}`: {e}", dpath.display()));
+            let dst = Dir::open_ambient_dir(&dpath, cap_std::ambient_authority())
+                .unwrap_or_else(|e| panic!("failed to open `{}`: {e}", dpath.display()));
+
+            let entries = f.walk().collect::<Vec<_>>();
+
+            for entry in entries {
+                let orig_path = entry.path();
+
+                // Paths are absolute, strip the first component to make them relative.
+                let mut components = orig_path.components();
+                assert_eq!(
+                    components.next(),
+                    Some(path::Component::RootDir),
+                    "sanity check failed"
+                );
+                let p: PathBuf = components.collect();
+
+                if entry.is_root() {
+                    // Nothing to do
+                } else if entry.is_storage() {
+                    dst.create_dir_all(&p).unwrap_or_else(|e| {
+                        panic!("failed to create directory for storage {p:?} at {dpath:?}: {e}")
+                    });
+                } else if entry.is_stream() {
+                    let mut stream = f.open_stream(orig_path).unwrap();
+                    let mut stream_file = dst
+                        .open_with(&p, OpenOptions::new().create_new(true).write(true))
+                        .unwrap_or_else(|e| {
+                            panic!("failed to create file for stream {p:?} at {dpath:?}: {e}")
+                        });
+                    io::copy(&mut stream, &mut stream_file).unwrap_or_else(|e| {
+                        panic!("failed to write file for stream {p:?} at {dpath:?}: {e}")
+                    });
+                } else {
+                    panic!("unknown entry kind at {}", entry.path().display());
+                }
+            }
+        }
+    }
 }
